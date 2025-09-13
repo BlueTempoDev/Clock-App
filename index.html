@@ -282,12 +282,20 @@
     const totalTimeEl = document.getElementById("total-time");
     const predictedEndEl = document.getElementById("predicted-end");
 
-    let totalSeconds = sections.reduce((acc, s) => acc + s.duration, 0);
-    totalTimeEl.textContent = "Total Schedule Time: " + format(totalSeconds);
+  let totalSeconds = sections.reduce((acc, s) => acc + s.duration, 0);
+totalTimeEl.textContent = "Total Schedule Time: " + format(totalSeconds);
 
-    const now = new Date();
-    const predictedEnd = new Date(now.getTime() + totalSeconds * 1000);
-    predictedEndEl.textContent = "Predicted End: " + predictedEnd.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+// Calculate remaining schedule time (current + future sections)
+let remainingSeconds = timeLeft;
+for (let i = currentSection + 1; i < sections.length; i++) {
+  remainingSeconds += sections[i].duration;
+}
+
+const now = new Date();
+const predictedEnd = new Date(now.getTime() + remainingSeconds * 1000);
+predictedEndEl.textContent = "Predicted End: " +
+  predictedEnd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
   }
 
   // Save entire state to Firebase
@@ -458,3 +466,4 @@
 
 </body>
 </html>
+
