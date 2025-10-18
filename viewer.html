@@ -110,6 +110,8 @@ let sections = [];
 let currentSection = 0;
 let timeLeft = 0;
 let totalDelay = 0;
+let isRunning = false;
+let lastUpdated = Date.now();
 
 // Format seconds as H:MM:SS
 function formatHMS(seconds) {
@@ -143,52 +145,55 @@ function calculateTotal() {
   return sections.reduce((acc,s)=>acc+s.duration,0) + totalDelay;
 }
 
-// Update UI from Firebase snapshot
-function updateUI(data){
-  if(!data || data.secretKey!=='PickAllPokemons98'){
-    timerEl.textContent="--:--";
-    sectionTitleEl.textContent="No Timer Data";
-    progressBar.style.width="0%";
-    overrunEl.textContent="";
-    remainingTimeEl.textContent="Remaining Schedule Time: --:--";
-    totalTimeEl.textContent="Total Schedule Time: --:--";
-    predictedEndEl.textContent="Predicted End: --:--";
-    return;
-  }
-
-  sections = data.sections || [];
-  currentSection = data.currentSection ?? 0;
-  timeLeft = data.timeLeft ?? 0;
-  totalDelay = data.totalDelay ?? 0;
-
+// Update UI
+function renderUI() {
   const section = sections[currentSection] || {name:"No Active Section", duration:1};
   sectionTitleEl.textContent = section.name;
 
-  if(timeLeft>=0){
-    timerEl.textContent = formatHMS(timeLeft);
+  let displayTime = timeLeft;
+  if(displayTime >= 0){
+    timerEl.textContent = formatHMS(displayTime);
     timerEl.style.color="#22c55e";
     overrunEl.textContent="";
   } else {
     timerEl.textContent="00:00";
     timerEl.style.color="#ef4444";
-    overrunEl.textContent="Overrun: "+formatHMS(timeLeft);
+    overrunEl.textContent="Overrun: "+formatHMS(displayTime);
   }
 
-  updateProgressBar(timeLeft, section.duration);
+  updateProgressBar(Math.max(displayTime,0), section.duration);
   remainingTimeEl.textContent="Remaining Schedule Time: "+formatHMS(calculateRemaining());
   totalTimeEl.textContent="Total Schedule Time: "+formatHMS(calculateTotal());
 
-  // Predicted end in HH:MM
   const predicted = new Date(Date.now() + calculateRemaining()*1000);
-  const hh = predicted.getHours().toString().padStart(2,'0');
-  const mm = predicted.getMinutes().toString().padStart(2,'0');
-  predictedEndEl.textContent="Predicted End: "+hh+":"+mm;
+  predictedEndEl.textContent="Predicted End: "+predicted.getHours().toString().padStart(2,'0')+":"+predicted.getMinutes().toString().padStart(2,'0');
 }
 
 // Real-time sync with Firebase
 database.ref('timerState').on('value', snapshot => {
-  updateUI(snapshot.val());
+  const data = snapshot.val();
+  if(!data || data.secretKey!=='PickAllPokemons98') return;
+
+  sections = data.sections || [];
+  currentSection = data.currentSection ?? 0;
+  timeLeft = data.timeLeft ?? 0;
+  totalDelay = data.totalDelay ?? 0;
+  isRunning = data.isRunning ?? false;
+  lastUpdated = data.lastUpdated ?? Date.now();
 });
+
+// Timer loop to update countdown in real-time
+setInterval(()=>{
+  if(isRunning){
+    const elapsed = Math.floor((Date.now() - lastUpdated)/1000);
+    let newTime = timeLeft - elapsed;
+    if(newTime < 0) totalDelay = Math.abs(newTime);
+    renderUI();
+  } else {
+    renderUI();
+  }
+}, 250);
+
 </script>
 </body>
 </html>
