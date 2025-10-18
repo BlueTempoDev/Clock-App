@@ -71,9 +71,9 @@ h1 {
 }
 #delay-time {
   font-size: 1.2rem;
-  color: #facc15;
-  margin: 0.25rem 0 0.5rem 0;
-  min-height: 1.5rem;
+  opacity: 0.6;
+  margin: 0 0 0.25rem 0;
+  user-select: none;
 }
 #section-title {
   font-size: 2.5rem;
@@ -239,7 +239,7 @@ function updateDisplay() {
   const overrunEl = document.getElementById("overrun");
   const delayEl = document.getElementById("delay-time");
 
-  if(timeLeft >= 0) {
+  if(timeLeft >= 0){
     timerEl.textContent = format(timeLeft);
     timerEl.style.color = "#22c55e";
     overrunEl.textContent = "";
@@ -258,11 +258,13 @@ function updateDisplay() {
 
 function updateProgressBar() {
   const total = sections[currentSection]?.duration || 1;
-  const remaining = Math.max(timeLeft,0);
-  const percent = (remaining/total) * 100;
+  const remaining = Math.max(timeLeft, 0);
+  const percent = (remaining / total) * 100; // start full green, shrink to show urgency
 
   const progressBar = document.getElementById("progress-bar");
   progressBar.style.width = percent + "%";
+  // keep gradient left to right: green -> orange -> red
+  progressBar.style.background = "linear-gradient(to right, #22c55e, #f97316, #ef4444)";
 }
 
 function updateTitle() {
@@ -346,24 +348,24 @@ function removeSection(index){
   saveState();
 }
 
-function dragStart(e){ dragStartIndex=+e.target.getAttribute("data-index"); }
+function dragStart(e){ dragStartIndex = +e.target.getAttribute("data-index"); }
 function dropSection(e){
   const dropTarget = e.target.closest(".section-item");
   if(!dropTarget) return;
   const dropIndex = +dropTarget.getAttribute("data-index");
   const item = sections.splice(dragStartIndex,1)[0];
   sections.splice(dropIndex,0,item);
-  if(currentSection===dragStartIndex) currentSection=dropIndex;
-  else if(currentSection>dragStartIndex && currentSection<=dropIndex) currentSection--;
-  else if(currentSection<dragStartIndex && currentSection>=dropIndex) currentSection++;
+  if(currentSection === dragStartIndex) currentSection = dropIndex;
+  else if(currentSection > dragStartIndex && currentSection <= dropIndex) currentSection--;
+  else if(currentSection < dragStartIndex && currentSection >= dropIndex) currentSection++;
   saveState();
 }
 
 function renderSections(){
-  const list=document.getElementById("section-list");
+  const list = document.getElementById("section-list");
   list.innerHTML="";
   sections.forEach((s,i)=>{
-    const div=document.createElement("div");
+    const div = document.createElement("div");
     div.className="section-item";
     div.setAttribute("draggable",true);
     div.setAttribute("data-index",i);
@@ -378,35 +380,34 @@ function renderSections(){
 
 function toggleMenu(){
   const menu=document.getElementById("menu-section");
-  menu.style.display = menu.style.display==="block"?"none":"block";
+  menu.style.display=menu.style.display==="block"?"none":"block";
 }
 
 function listenFirebase(){
   database.ref('timerState').on('value',(snapshot)=>{
-    const data = snapshot.val();
-    if(!data) return;
-    if(data.secretKey!=='PickAllPokemons98') return;
-
+    const data=snapshot.val();
+    if(!data || data.secretKey!=='PickAllPokemons98') return;
     sections = data.sections || [];
     currentSection = data.currentSection ?? 0;
     timeLeft = data.timeLeft ?? (sections[currentSection]?.duration || 0);
     isRunning = data.isRunning || false;
     totalDelay = data.totalDelay || 0;
-
     renderSections();
     updateDisplay();
   });
 }
 
+// Timer tick
 setInterval(()=>{
   if(isRunning){
     timeLeft--;
-    if(timeLeft<0) totalDelay++; // accumulate delay automatically during overrun
+    if(timeLeft<0) totalDelay++;
   }
   updateDisplay();
 },1000);
 
-window.onload=()=>{ listenFirebase(); updateDisplay(); };
+window.onload = () => { listenFirebase(); updateDisplay(); };
 </script>
+
 </body>
 </html>
