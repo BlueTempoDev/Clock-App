@@ -45,7 +45,7 @@ html, body {
   height: 100%;
   width: 0%;
   background: #22c55e;
-  transition: width 0.25s linear, background-color 0.25s ease;
+  transition: width 0.25s linear, background-color 0.25s linear;
 }
 #overrun {
   font-size: 4vw;
@@ -114,7 +114,6 @@ let isRunning = false;
 let lastUpdated = Date.now();
 let currentSectionDuration = 1;
 
-// Format seconds as H:MM:SS
 function formatHMS(seconds) {
   const absSec = Math.abs(seconds);
   const h = Math.floor(absSec / 3600);
@@ -124,19 +123,16 @@ function formatHMS(seconds) {
   return `${m}:${s.toString().padStart(2,"0")}`;
 }
 
-// Calculate remaining schedule including future sections and totalDelay
 function calculateRemaining(displayTime) {
   let rem = Math.max(displayTime,0) + totalDelay;
   for(let i=currentSection+1;i<sections.length;i++) rem += sections[i].duration;
   return rem;
 }
 
-// Total schedule including totalDelay
 function calculateTotal() {
   return sections.reduce((acc,s)=>acc+s.duration,0) + totalDelay;
 }
 
-// Update UI
 function renderUI(displayTime){
   const section = sections[currentSection] || {name:"No Active Section", duration:1};
   sectionTitleEl.textContent = section.name;
@@ -153,11 +149,20 @@ function renderUI(displayTime){
     overrunEl.textContent="Overrun: "+formatHMS(displayTime);
   }
 
-  // Progress bar sync
-  let progressPercent = Math.max(0, Math.min(100, ((section.duration - Math.max(displayTime,0))/section.duration)*100));
-  progressBar.style.width = progressPercent+"%";
-  if(progressPercent>50) progressBar.style.backgroundColor="#22c55e";
-  else if(progressPercent>20) progressBar.style.backgroundColor="#f97316";
+  // Progress bar: full section percentage
+  let percent = 0;
+  if(displayTime >= 0){
+    percent = ((section.duration - displayTime)/section.duration)*100;
+    percent = Math.min(100, Math.max(0, percent));
+  } else {
+    percent = 100;
+  }
+  progressBar.style.width = percent+"%";
+
+  // Color gradient: green->orange->red based on remaining % of section
+  const remainingPercent = 100 - percent;
+  if(remainingPercent > 50) progressBar.style.backgroundColor="#22c55e";
+  else if(remainingPercent > 20) progressBar.style.backgroundColor="#f97316";
   else progressBar.style.backgroundColor="#ef4444";
 
   remainingTimeEl.textContent="Remaining Schedule Time: "+formatHMS(calculateRemaining(displayTime));
@@ -167,7 +172,7 @@ function renderUI(displayTime){
   predictedEndEl.textContent="Predicted End: "+predicted.getHours().toString().padStart(2,'0')+":"+predicted.getMinutes().toString().padStart(2,'0');
 }
 
-// Real-time sync with Firebase
+// Real-time Firebase sync
 database.ref('timerState').on('value', snapshot => {
   const data = snapshot.val();
   if(!data || data.secretKey!=='PickAllPokemons98') return;
@@ -177,10 +182,10 @@ database.ref('timerState').on('value', snapshot => {
   timeLeft = data.timeLeft ?? 0;
   totalDelay = data.totalDelay ?? 0;
   isRunning = data.isRunning ?? false;
-  lastUpdated = Date.now(); // reset local elapsed
+  lastUpdated = Date.now();
 });
 
-// Timer loop to update countdown and bar in real-time
+// Timer loop
 setInterval(()=>{
   let displayTime = timeLeft;
   if(isRunning){
