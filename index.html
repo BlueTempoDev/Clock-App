@@ -1,4 +1,4 @@
-<!DOCTYPE html><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -208,13 +208,21 @@ const database = firebase.database();
 
 let sections=[], currentSection=0, timeLeft=0, isRunning=false, dragStartIndex=null, totalDelay=0;
 
+// Main timer remains MM:SS
+function format(seconds){
+  const m=Math.floor(Math.abs(seconds)/60);
+  const s=Math.abs(seconds)%60;
+  return `${m}:${s.toString().padStart(2,'0')}`;
+}
+
+// Format for remaining and total time in H:MM:SS
 function formatHMS(seconds){
   const absSec = Math.abs(seconds);
   const h = Math.floor(absSec/3600);
   const m = Math.floor((absSec%3600)/60);
   const s = absSec%60;
   if(h>0) return `${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-  return `${m}:${s.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+  return `${m}:${s.toString().padStart(2,'0')}`;
 }
 
 function updateDisplay(){
@@ -223,15 +231,15 @@ function updateDisplay(){
   const delayEl=document.getElementById("delay-time");
 
   if(timeLeft>=0){
-    timerEl.textContent=formatHMS(timeLeft);
+    timerEl.textContent=format(timeLeft); // main timer unchanged
     timerEl.style.color="#22c55e";
     overrunEl.textContent="";
   } else {
     timerEl.textContent="00:00";
     timerEl.style.color="#ef4444";
-    overrunEl.textContent=`Overrun: ${formatHMS(Math.abs(timeLeft))}`;
+    overrunEl.textContent=`Overrun: ${format(Math.abs(timeLeft))}`;
   }
-  delayEl.textContent="Total Delay: "+formatHMS(totalDelay);
+  delayEl.textContent="Total Delay: "+format(totalDelay);
 
   updateProgressBar();
   updateRemainingTime();
@@ -311,7 +319,7 @@ function removeSection(index){ if(isRunning) return alert("Pause timer before re
 // Drag & drop
 function dragStart(e){ dragStartIndex=+e.target.getAttribute("data-index"); }
 function dropSection(e){ const dropTarget=e.target.closest(".section-item"); if(!dropTarget) return; const dropIndex=+dropTarget.getAttribute("data-index"); const item=sections.splice(dragStartIndex,1)[0]; sections.splice(dropIndex,0,item); if(currentSection===dragStartIndex) currentSection=dropIndex; else if(currentSection>dragStartIndex&&currentSection<=dropIndex) currentSection--; else if(currentSection<dragStartIndex&&currentSection>=dropIndex) currentSection++; saveState(); }
-function renderSections(){ const list=document.getElementById("section-list"); list.innerHTML=""; sections.forEach((s,i)=>{ const div=document.createElement("div"); div.className="section-item"; div.setAttribute("draggable",true); div.setAttribute("data-index",i); div.ondragstart=dragStart; if(i===currentSection) div.classList.add("active"); div.innerHTML=`<span>${s.name} (${formatHMS(s.duration)})</span><button class="remove-btn" onclick="removeSection(${i})">X</button>`; list.appendChild(div); }); updateTitle(); }
+function renderSections(){ const list=document.getElementById("section-list"); list.innerHTML=""; sections.forEach((s,i)=>{ const div=document.createElement("div"); div.className="section-item"; div.setAttribute("draggable",true); div.setAttribute("data-index",i); div.ondragstart=dragStart; if(i===currentSection) div.classList.add("active"); div.innerHTML=`<span>${s.name} (${format(s.duration)})</span><button class="remove-btn" onclick="removeSection(${i})">X</button>`; list.appendChild(div); }); updateTitle(); }
 function toggleMenu(){ const menu=document.getElementById("menu-section"); menu.style.display=menu.style.display==="block"?"none":"block"; }
 
 // Firebase listener
@@ -343,4 +351,3 @@ window.onload=()=>{ listenFirebase(); updateDisplay(); };
 
 </body>
 </html>
-
