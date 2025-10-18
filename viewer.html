@@ -109,8 +109,9 @@ const predictedEndEl = document.getElementById("predicted-end");
 let sections = [];
 let currentSection = 0;
 let timeLeft = 0;
+let totalDelay = 0;
 
-// Format seconds as H:MM:SS or HH:MM if hours exist
+// Format seconds as H:MM:SS
 function formatHMS(seconds) {
   const absSec = Math.abs(seconds);
   const h = Math.floor(absSec / 3600);
@@ -120,26 +121,26 @@ function formatHMS(seconds) {
   return `${m}:${s.toString().padStart(2,"0")}`;
 }
 
-// Update progress bar (green → yellow → red)
+// Update progress bar
 function updateProgressBar(timeLeft, total) {
   if (!total) return;
   const percent = Math.max(0, Math.min(100, ((total - timeLeft)/total)*100));
   progressBar.style.width = percent+"%";
-  if(percent<50) progressBar.style.backgroundColor="#22c55e";
-  else if(percent<80) progressBar.style.backgroundColor="#facc15";
+  if(percent>50) progressBar.style.backgroundColor="#22c55e";
+  else if(percent>20) progressBar.style.backgroundColor="#f97316";
   else progressBar.style.backgroundColor="#ef4444";
 }
 
-// Remaining schedule
+// Calculate remaining schedule including future sections and totalDelay
 function calculateRemaining() {
-  let rem = timeLeft;
+  let rem = Math.max(timeLeft,0) + totalDelay;
   for(let i=currentSection+1;i<sections.length;i++) rem += sections[i].duration;
   return rem;
 }
 
-// Total schedule
+// Total schedule including totalDelay
 function calculateTotal() {
-  return sections.reduce((acc,s)=>acc+s.duration,0);
+  return sections.reduce((acc,s)=>acc+s.duration,0) + totalDelay;
 }
 
 // Update UI from Firebase snapshot
@@ -158,6 +159,7 @@ function updateUI(data){
   sections = data.sections || [];
   currentSection = data.currentSection ?? 0;
   timeLeft = data.timeLeft ?? 0;
+  totalDelay = data.totalDelay ?? 0;
 
   const section = sections[currentSection] || {name:"No Active Section", duration:1};
   sectionTitleEl.textContent = section.name;
@@ -183,7 +185,7 @@ function updateUI(data){
   predictedEndEl.textContent="Predicted End: "+hh+":"+mm;
 }
 
-// Sync with Firebase
+// Real-time sync with Firebase
 database.ref('timerState').on('value', snapshot => {
   updateUI(snapshot.val());
 });
