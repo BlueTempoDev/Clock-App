@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>Church Clock Viewer</title>
 
-<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
@@ -30,8 +29,6 @@ html, body {
   line-height: 1;
   user-select: none;
   font-size: 20vw;
-  max-font-size: 120px;
-  min-font-size: 40px;
   padding: 0 5vw;
   box-sizing: border-box;
 }
@@ -48,7 +45,7 @@ html, body {
   height: 100%;
   width: 0%;
   background: #22c55e;
-  transition: width 1s linear, background-color 0.5s ease;
+  transition: width 0.5s linear, background-color 0.5s ease;
 }
 #overrun {
   font-size: 4vw;
@@ -77,9 +74,7 @@ html, body {
   gap: 0.5rem;
   user-select: none;
 }
-#scale-slider {
-  width: 150px;
-}
+#scale-slider { width: 150px; }
 @media (min-width: 600px) {
   #timer { font-size: 120px !important; }
   #overrun { font-size: 24px !important; }
@@ -104,122 +99,116 @@ html, body {
 </div>
 
 <script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyD056thmGLxTwVOU01Qy_KNIqS4aqdW8Bw",
-    authDomain: "clockapp-26b10.firebaseapp.com",
-    projectId: "clockapp-26b10",
-    storageBucket: "clockapp-26b10.firebasestorage.app",
-    messagingSenderId: "381529267609",
-    appId: "1:381529267609:web:3b6565b1b60c2c72acc708",
-    measurementId: "G-SX7DKY8WPQ"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyD056thmGLxTwVOU01Qy_KNIqS4aqdW8Bw",
+  authDomain: "clockapp-26b10.firebaseapp.com",
+  projectId: "clockapp-26b10",
+  storageBucket: "clockapp-26b10.firebasestorage.app",
+  messagingSenderId: "381529267609",
+  appId: "1:381529267609:web:3b6565b1b60c2c72acc708",
+  measurementId: "G-SX7DKY8WPQ"
+};
 
-  firebase.initializeApp(firebaseConfig);
-  const database = firebase.database();
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
 
-  const timerEl = document.getElementById("timer");
-  const overrunEl = document.getElementById("overrun");
-  const sectionTitleEl = document.getElementById("section-title");
-  const progressBar = document.getElementById("progress-bar");
-  const remainingTimeEl = document.getElementById("remaining-time");
-  const totalTimeEl = document.getElementById("total-time");
-  const predictedEndEl = document.getElementById("predicted-end");
-  const scaleSlider = document.getElementById("scale-slider");
+const timerEl = document.getElementById("timer");
+const overrunEl = document.getElementById("overrun");
+const sectionTitleEl = document.getElementById("section-title");
+const progressBar = document.getElementById("progress-bar");
+const remainingTimeEl = document.getElementById("remaining-time");
+const totalTimeEl = document.getElementById("total-time");
+const predictedEndEl = document.getElementById("predicted-end");
+const scaleSlider = document.getElementById("scale-slider");
 
-  let sections = [];
-  let currentSection = 0;
-  let timeLeft = 0;
+let sections = [];
+let currentSection = 0;
+let timeLeft = 0;
+let lastUpdate = Date.now();
 
-  function format(seconds) {
-    const hrs = Math.floor(Math.abs(seconds)/3600);
-    const mins = Math.floor((Math.abs(seconds)%3600)/60);
-    const secs = Math.floor(Math.abs(seconds)%60);
-    if (hrs>0) return `${hrs}h ${mins}m ${secs}s`;
-    return `${mins}m ${secs}s`;
+scaleSlider.addEventListener("input", () => {
+  timerEl.style.fontSize = scaleSlider.value + "px";
+});
+
+function formatTime(seconds) {
+  const hrs = Math.floor(Math.abs(seconds)/3600);
+  const mins = Math.floor((Math.abs(seconds)%3600)/60);
+  const secs = Math.floor(Math.abs(seconds)%60);
+  if (hrs>0) return `${hrs}h ${mins}m ${secs}s`;
+  return `${mins}m ${secs}s`;
+}
+
+function updateProgressBar(timeLeft, total) {
+  if (!total) return;
+  const percent = Math.max(0, Math.min(100, ((total - timeLeft)/total)*100));
+  progressBar.style.width = percent+"%";
+  if(percent<50) progressBar.style.backgroundColor="#22c55e";
+  else if(percent<80) progressBar.style.backgroundColor="#facc15";
+  else progressBar.style.backgroundColor="#ef4444";
+}
+
+function calculateRemaining() {
+  let rem = timeLeft;
+  for(let i=currentSection+1;i<sections.length;i++) rem += sections[i].duration;
+  return rem;
+}
+
+function calculateTotal() {
+  return sections.reduce((acc,s)=>acc+s.duration,0);
+}
+
+function updateUI() {
+  if(!sections.length){
+    timerEl.textContent="--:--";
+    sectionTitleEl.textContent="No Timer Data";
+    progressBar.style.width="0%";
+    overrunEl.textContent="";
+    remainingTimeEl.textContent="Remaining Schedule Time: --:--";
+    totalTimeEl.textContent="Total Schedule Time: --:--";
+    predictedEndEl.textContent="Predicted End: --:--";
+    return;
   }
 
-  scaleSlider.addEventListener("input", () => {
-    timerEl.style.fontSize = scaleSlider.value + "px";
-  });
+  const section = sections[currentSection] || {name:"No Active Section", duration:1};
+  sectionTitleEl.textContent = section.name;
 
-  function updateProgressBar(timeLeft, total) {
-    if (total <= 0) return;
-    const remaining = Math.max(timeLeft, 0);
-    const percent = ((total - remaining) / total) * 100;
-    progressBar.style.width = percent + "%";
+  const now = Date.now();
+  let syncedTimeLeft = timeLeft - Math.floor((now - lastUpdate)/1000);
 
-    if (percent < 50) progressBar.style.backgroundColor = "#22c55e"; // green
-    else if (percent < 80) progressBar.style.backgroundColor = "#facc15"; // orange
-    else progressBar.style.backgroundColor = "#ef4444"; // red
+  if(syncedTimeLeft>=0){
+    timerEl.textContent = formatTime(syncedTimeLeft);
+    timerEl.style.color="#22c55e";
+    overrunEl.textContent="";
+  } else {
+    timerEl.textContent="00:00";
+    timerEl.style.color="#ef4444";
+    overrunEl.textContent="Overrun: "+formatTime(syncedTimeLeft);
   }
 
-  function calculateRemaining() {
-    let rem = timeLeft;
-    for(let i=currentSection+1;i<sections.length;i++) rem+=sections[i].duration;
-    return rem;
-  }
+  updateProgressBar(syncedTimeLeft, section.duration);
 
-  function calculateTotal() {
-    return sections.reduce((acc,s)=>acc+s.duration,0);
-  }
+  remainingTimeEl.textContent = "Remaining Schedule Time: "+formatTime(calculateRemaining());
+  totalTimeEl.textContent = "Total Schedule Time: "+formatTime(calculateTotal());
 
-  function updateUI() {
-    if(!sections.length){
-      timerEl.textContent="--:--";
-      sectionTitleEl.textContent="No Timer Data";
-      progressBar.style.width="0%";
-      overrunEl.textContent="";
-      remainingTimeEl.textContent="Remaining Schedule Time: --:--";
-      totalTimeEl.textContent="Total Schedule Time: --:--";
-      predictedEndEl.textContent="Predicted End: --:--";
-      return;
-    }
+  const predictedEnd = new Date(now + calculateRemaining()*1000);
+  predictedEndEl.textContent = "Predicted End: "+predictedEnd.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}
 
-    const section = sections[currentSection] || {name:"No Active Section", duration:1};
-    sectionTitleEl.textContent = section.name;
+// Sync with Firebase
+database.ref('timerState').on('value', snapshot => {
+  const data = snapshot.val();
+  if(!data || data.secretKey !== 'PickAllPokemons98') return;
 
-    if(timeLeft>=0){
-      timerEl.textContent = format(timeLeft);
-      timerEl.style.color="#22c55e";
-      overrunEl.textContent="";
-    } else {
-      timerEl.textContent="00:00";
-      timerEl.style.color="#ef4444";
-      overrunEl.textContent="Overrun: "+format(timeLeft);
-    }
+  sections = data.sections || [];
+  currentSection = data.currentSection ?? 0;
+  timeLeft = data.timeLeft ?? 0;
+  lastUpdate = Date.now();
 
-    updateProgressBar(timeLeft, section.duration);
+  updateUI();
+});
 
-    const remainingSeconds = calculateRemaining();
-    remainingTimeEl.textContent="Remaining Schedule Time: "+format(remainingSeconds);
-
-    totalTimeEl.textContent="Total Schedule Time: "+format(calculateTotal());
-
-    const predictedEnd = new Date(Date.now()+remainingSeconds*1000);
-    predictedEndEl.textContent="Predicted End: "+predictedEnd.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  }
-
-  function tick(){
-    if(sections.length>0){
-      timeLeft--;
-      if(timeLeft<-3600) timeLeft=-3600; // cap at -1hr overrun
-      updateUI();
-    }
-  }
-
-  database.ref('timerState').on('value', snapshot=>{
-    const data = snapshot.val();
-    if(!data) return;
-    if(data.secretKey !== 'PickAllPokemons98') return;
-
-    sections = data.sections || [];
-    currentSection = data.currentSection ?? 0;
-    timeLeft = data.timeLeft ?? 0;
-
-    updateUI();
-  });
-
-  setInterval(tick,1000);
+// Smooth update every second
+setInterval(updateUI, 1000);
 </script>
 </body>
 </html>
