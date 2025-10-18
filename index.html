@@ -43,11 +43,10 @@ h1 {
   margin: 0;
   user-select: none;
   line-height: 1;
-  transition: font-size 0.2s ease;
 }
 #progress-bar-container {
-  width: 10%;
-  height: 20px; /* Increased height for better visibility */
+  width: 80%;        /* Much longer for visibility */
+  height: 40px;      /* Taller for visibility */
   background: #333;
   border-radius: 10px;
   overflow: hidden;
@@ -158,16 +157,6 @@ button {
   padding: 0.3rem 0.6rem;
   cursor: pointer;
 }
-#scale-control {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-  justify-content: center;
-}
-#scale-control input[type="range"] {
-  width: 150px;
-}
 </style>
 </head>
 <body>
@@ -183,11 +172,6 @@ button {
 <div id="remaining-time">Remaining Schedule Time: --:--</div>
 <div id="total-time">Total Schedule Time: --:--</div>
 <div id="predicted-end">Predicted End: --:--</div>
-
-<div id="scale-control">
-  <label for="timer-scale">Timer Size:</label>
-  <input type="range" id="timer-scale" min="50" max="300" value="100">
-</div>
 
 <div class="bottom-container">
   <div class="controls">
@@ -257,9 +241,9 @@ function updateProgressBar(){
   const percent=(remaining/total)*100;
   const progressBar=document.getElementById("progress-bar");
 
-  if(percent>50) progressBar.style.backgroundColor="#22c55e";
-  else if(percent>20) progressBar.style.backgroundColor="#f97316";
-  else progressBar.style.backgroundColor="#ef4444";
+  if(percent>50) progressBar.style.backgroundColor="#22c55e";   // Green
+  else if(percent>20) progressBar.style.backgroundColor="#f97316"; // Orange
+  else progressBar.style.backgroundColor="#ef4444";  // Red
 
   progressBar.style.width=percent+"%";
 }
@@ -290,6 +274,7 @@ function updateTotalAndEnd(){
   predictedEndEl.textContent="Predicted End: "+predictedEnd.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
 }
 
+// Save to Firebase
 function saveState(){
   database.ref('timerState').set({
     secretKey:'PickAllPokemons98',
@@ -327,7 +312,7 @@ function dropSection(e){ const dropTarget=e.target.closest(".section-item"); if(
 function renderSections(){ const list=document.getElementById("section-list"); list.innerHTML=""; sections.forEach((s,i)=>{ const div=document.createElement("div"); div.className="section-item"; div.setAttribute("draggable",true); div.setAttribute("data-index",i); div.ondragstart=dragStart; if(i===currentSection) div.classList.add("active"); div.innerHTML=`<span>${s.name} (${format(s.duration)})</span><button class="remove-btn" onclick="removeSection(${i})">X</button>`; list.appendChild(div); }); updateTitle(); }
 function toggleMenu(){ const menu=document.getElementById("menu-section"); menu.style.display=menu.style.display==="block"?"none":"block"; }
 
-// Firebase
+// Firebase listener
 function listenFirebase(){
   database.ref('timerState').on('value',(snapshot)=>{
     const data=snapshot.val();
@@ -350,13 +335,6 @@ setInterval(()=>{
   }
   updateDisplay();
 },1000);
-
-// Timer scale control
-const timerScale=document.getElementById("timer-scale");
-timerScale.addEventListener("input",()=>{
-  const timerEl=document.getElementById("timer");
-  timerEl.style.fontSize=timerScale.value+"px";
-});
 
 window.onload=()=>{ listenFirebase(); updateDisplay(); };
 </script>
