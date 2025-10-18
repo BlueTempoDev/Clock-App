@@ -45,7 +45,7 @@ html, body {
   height: 100%;
   width: 0%;
   background: #22c55e;
-  transition: width 0.5s linear, background-color 0.5s ease;
+  transition: width 0.25s linear, background-color 0.25s ease;
 }
 #overrun {
   font-size: 4vw;
@@ -112,6 +112,7 @@ let timeLeft = 0;
 let totalDelay = 0;
 let isRunning = false;
 let lastUpdated = Date.now();
+let currentSectionDuration = 1;
 
 // Format seconds as H:MM:SS
 function formatHMS(seconds) {
@@ -123,19 +124,9 @@ function formatHMS(seconds) {
   return `${m}:${s.toString().padStart(2,"0")}`;
 }
 
-// Update progress bar
-function updateProgressBar(timeLeft, total) {
-  if (!total) return;
-  const percent = Math.max(0, Math.min(100, ((total - timeLeft)/total)*100));
-  progressBar.style.width = percent+"%";
-  if(percent>50) progressBar.style.backgroundColor="#22c55e";
-  else if(percent>20) progressBar.style.backgroundColor="#f97316";
-  else progressBar.style.backgroundColor="#ef4444";
-}
-
 // Calculate remaining schedule including future sections and totalDelay
-function calculateRemaining() {
-  let rem = Math.max(timeLeft,0) + totalDelay;
+function calculateRemaining(displayTime) {
+  let rem = Math.max(displayTime,0) + totalDelay;
   for(let i=currentSection+1;i<sections.length;i++) rem += sections[i].duration;
   return rem;
 }
@@ -146,11 +137,12 @@ function calculateTotal() {
 }
 
 // Update UI
-function renderUI() {
+function renderUI(displayTime){
   const section = sections[currentSection] || {name:"No Active Section", duration:1};
   sectionTitleEl.textContent = section.name;
+  currentSectionDuration = section.duration;
 
-  let displayTime = timeLeft;
+  // Timer display
   if(displayTime >= 0){
     timerEl.textContent = formatHMS(displayTime);
     timerEl.style.color="#22c55e";
@@ -161,11 +153,17 @@ function renderUI() {
     overrunEl.textContent="Overrun: "+formatHMS(displayTime);
   }
 
-  updateProgressBar(Math.max(displayTime,0), section.duration);
-  remainingTimeEl.textContent="Remaining Schedule Time: "+formatHMS(calculateRemaining());
+  // Progress bar sync
+  let progressPercent = Math.max(0, Math.min(100, ((section.duration - Math.max(displayTime,0))/section.duration)*100));
+  progressBar.style.width = progressPercent+"%";
+  if(progressPercent>50) progressBar.style.backgroundColor="#22c55e";
+  else if(progressPercent>20) progressBar.style.backgroundColor="#f97316";
+  else progressBar.style.backgroundColor="#ef4444";
+
+  remainingTimeEl.textContent="Remaining Schedule Time: "+formatHMS(calculateRemaining(displayTime));
   totalTimeEl.textContent="Total Schedule Time: "+formatHMS(calculateTotal());
 
-  const predicted = new Date(Date.now() + calculateRemaining()*1000);
+  const predicted = new Date(Date.now() + calculateRemaining(displayTime)*1000);
   predictedEndEl.textContent="Predicted End: "+predicted.getHours().toString().padStart(2,'0')+":"+predicted.getMinutes().toString().padStart(2,'0');
 }
 
@@ -179,19 +177,17 @@ database.ref('timerState').on('value', snapshot => {
   timeLeft = data.timeLeft ?? 0;
   totalDelay = data.totalDelay ?? 0;
   isRunning = data.isRunning ?? false;
-  lastUpdated = data.lastUpdated ?? Date.now();
+  lastUpdated = Date.now(); // reset local elapsed
 });
 
-// Timer loop to update countdown in real-time
+// Timer loop to update countdown and bar in real-time
 setInterval(()=>{
+  let displayTime = timeLeft;
   if(isRunning){
     const elapsed = Math.floor((Date.now() - lastUpdated)/1000);
-    let newTime = timeLeft - elapsed;
-    if(newTime < 0) totalDelay = Math.abs(newTime);
-    renderUI();
-  } else {
-    renderUI();
+    displayTime = timeLeft - elapsed;
   }
+  renderUI(displayTime);
 }, 250);
 
 </script>
