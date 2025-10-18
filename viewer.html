@@ -28,16 +28,16 @@ html, body {
   color: #22c55e;
   line-height: 1;
   user-select: none;
-  font-size: 20vw;
+  font-size: 22vw; /* slightly bigger */
   padding: 0 5vw;
   box-sizing: border-box;
 }
 #progress-bar-container {
-  width: 90%;
-  max-width: 600px;
-  height: 20px;
+  width: 95%;
+  max-width: 650px;
+  height: 25px; /* slightly taller */
   background: #333;
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
   margin: 1rem auto 0.5rem auto;
 }
@@ -66,20 +66,11 @@ html, body {
   margin: 0.2rem 0;
   user-select: none;
 }
-#scale-container {
-  margin: 1rem 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  user-select: none;
-}
-#scale-slider { width: 150px; }
 @media (min-width: 600px) {
-  #timer { font-size: 120px !important; }
-  #overrun { font-size: 24px !important; }
-  #section-title { font-size: 32px !important; }
-  #remaining-time, #total-time, #predicted-end { font-size: 16px !important; }
+  #timer { font-size: 130px !important; }
+  #overrun { font-size: 28px !important; }
+  #section-title { font-size: 36px !important; }
+  #remaining-time, #total-time, #predicted-end { font-size: 18px !important; }
 }
 </style>
 </head>
@@ -92,11 +83,6 @@ html, body {
 <div id="remaining-time">Remaining Schedule Time: --:--</div>
 <div id="total-time">Total Schedule Time: --:--</div>
 <div id="predicted-end">Predicted End: --:--</div>
-
-<div id="scale-container">
-  <label for="scale-slider">Timer Scale:</label>
-  <input type="range" id="scale-slider" min="50" max="300" value="200" />
-</div>
 
 <script>
 const firebaseConfig = {
@@ -119,25 +105,19 @@ const progressBar = document.getElementById("progress-bar");
 const remainingTimeEl = document.getElementById("remaining-time");
 const totalTimeEl = document.getElementById("total-time");
 const predictedEndEl = document.getElementById("predicted-end");
-const scaleSlider = document.getElementById("scale-slider");
 
 let sections = [];
 let currentSection = 0;
 let timeLeft = 0;
 
-// Timer scale slider
-scaleSlider.addEventListener("input", () => {
-  timerEl.style.fontSize = scaleSlider.value + "px";
-});
-
-// Format seconds as MM:SS (no hours)
+// Format seconds as MM:SS
 function formatMMSS(seconds) {
-  const m = Math.floor(Math.abs(seconds) / 60);
-  const s = Math.abs(seconds) % 60;
+  const m = Math.floor(Math.abs(seconds)/60);
+  const s = Math.abs(seconds)%60;
   return `${m}:${s.toString().padStart(2,"0")}`;
 }
 
-// Update progress bar
+// Update progress bar (green → orange → red)
 function updateProgressBar(timeLeft, total) {
   if (!total) return;
   const percent = Math.max(0, Math.min(100, ((total - timeLeft)/total)*100));
@@ -147,14 +127,14 @@ function updateProgressBar(timeLeft, total) {
   else progressBar.style.backgroundColor="#ef4444";
 }
 
-// Calculate remaining schedule
+// Remaining schedule
 function calculateRemaining() {
   let rem = timeLeft;
   for(let i=currentSection+1;i<sections.length;i++) rem += sections[i].duration;
   return rem;
 }
 
-// Calculate total schedule
+// Total schedule
 function calculateTotal() {
   return sections.reduce((acc,s)=>acc+s.duration,0);
 }
@@ -179,7 +159,6 @@ function updateUI(data){
   const section = sections[currentSection] || {name:"No Active Section", duration:1};
   sectionTitleEl.textContent = section.name;
 
-  // Display timeLeft exactly from Firebase
   if(timeLeft>=0){
     timerEl.textContent = formatMMSS(timeLeft);
     timerEl.style.color="#22c55e";
@@ -191,15 +170,17 @@ function updateUI(data){
   }
 
   updateProgressBar(timeLeft, section.duration);
-
   remainingTimeEl.textContent="Remaining Schedule Time: "+formatMMSS(calculateRemaining());
   totalTimeEl.textContent="Total Schedule Time: "+formatMMSS(calculateTotal());
 
-  const predictedEnd = new Date(Date.now() + calculateRemaining()*1000);
-  predictedEndEl.textContent="Predicted End: "+predictedEnd.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  // Predicted end in HH:MM format
+  const predicted = new Date(Date.now() + calculateRemaining()*1000);
+  const hh = predicted.getHours().toString().padStart(2,'0');
+  const mm = predicted.getMinutes().toString().padStart(2,'0');
+  predictedEndEl.textContent="Predicted End: "+hh+":"+mm;
 }
 
-// Listen to Firebase and update immediately
+// Sync with Firebase
 database.ref('timerState').on('value', snapshot => {
   updateUI(snapshot.val());
 });
