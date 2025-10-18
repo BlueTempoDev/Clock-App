@@ -1,229 +1,426 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Synced Timer App</title>
-  <style>
-    body {
-      background: #0f172a;
-      color: #f8fafc;
-      font-family: "Segoe UI", sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Church Clock App - Firebase Driven</title>
 
-    h1 {
-      font-size: 1.8rem;
-      margin-bottom: 1rem;
-    }
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-    #sectionName {
-      font-size: 1.2rem;
-      color: #94a3b8;
-      margin-bottom: 0.4rem;
-    }
+<style>
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background-color: #000;
+    color: #fff;
+    font-family: sans-serif;
+    overflow-x: hidden;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    box-sizing: border-box;
+    padding-bottom: 200px;
+    text-align: center;
+  }
+  h1 {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.5rem;
+    opacity: 0.7;
+    margin: 0;
+    user-select: none;
+  }
+  #timer {
+    font-size: 10rem;
+    color: #22c55e;
+    font-weight: 900;
+    margin: 0;
+    user-select: none;
+    line-height: 1;
+  }
+  #progress-bar-container {
+    width: 10%;
+    height: 8px;
+    background: linear-gradient(to right, #22c55e 0%, #facc15 50%, #ef4444 100%);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 1rem auto 0.5rem auto;
+    position: relative;
+  }
+  /* Cover slides from right to left to reveal gradient */
+  #progress-cover {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    transition: width 1s linear;
+  }
 
-    #timer {
-      font-size: 4rem;
-      font-weight: bold;
-      margin-bottom: 0.5rem;
-    }
-
-    #overrun {
-      font-size: 1.2rem;
-      color: #ef4444;
-    }
-
-    #progressBarContainer {
-      width: 80%;
-      height: 25px;
-      background: linear-gradient(to right, #22c55e 0%, #f97316 50%, #ef4444 100%);
-      border-radius: 1rem;
-      overflow: hidden;
-      margin: 1rem 0;
-      position: relative;
-    }
-
-    #progressCover {
-      position: absolute;
-      top: 0;
-      right: 0;
-      height: 100%;
-      width: 0%;
-      background: #1e293b;
-      transition: width 1s linear;
-    }
-
-    .controls button {
-      margin: 0.3rem;
-      padding: 0.5rem 1rem;
-      border: none;
-      border-radius: 0.5rem;
-      background: #334155;
-      color: white;
-      cursor: pointer;
-    }
-
-    .controls button:hover {
-      background: #475569;
-    }
-
-    #stats {
-      margin-top: 1rem;
-      font-size: 1.1rem;
-      color: #94a3b8;
-    }
-  </style>
+  #overrun {
+    font-size: 2rem;
+    color: #ef4444;
+    margin: 0.25rem 0 0.5rem 0;
+    min-height: 2.5rem;
+    user-select: none;
+  }
+  #section-title {
+    font-size: 2.5rem;
+    opacity: 0.8;
+    margin: 0 0 0.5rem 0;
+    user-select: none;
+  }
+  #remaining-time, #total-time, #predicted-end {
+    font-size: 1.2rem;
+    opacity: 0.6;
+    margin: 0 0 0.25rem 0;
+    user-select: none;
+  }
+  .bottom-container {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 600px;
+    background: #111;
+    border-top: 2px solid #22c55e;
+    padding: 1rem 1rem 2rem 1rem;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    z-index: 10;
+  }
+  .controls {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  button {
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    cursor: pointer;
+    min-width: 80px;
+    user-select: none;
+  }
+  .menu-toggle {
+    background: #444;
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    cursor: pointer;
+    width: 100%;
+    max-width: 600px;
+    text-align: center;
+    user-select: none;
+  }
+  #menu-section {
+    display: none;
+    width: 100%;
+    max-width: 600px;
+    background: #222;
+    padding: 1rem;
+    border-radius: 8px;
+    box-sizing: border-box;
+    user-select: none;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  #menu-section .controls {
+    justify-content: flex-start;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+    margin-bottom: 1rem;
+  }
+  #section-list {
+    max-height: 120px;
+    overflow-y: auto;
+  }
+  .section-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #111;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 5px;
+    cursor: move;
+  }
+  .section-item.active {
+    border: 2px solid #22c55e;
+  }
+  .remove-btn {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 0.3rem 0.6rem;
+    cursor: pointer;
+  }
+</style>
 </head>
 <body>
-  <h1>⏱ Synced Timer</h1>
 
-  <div id="sectionName"></div>
-  <div id="timer">00:00</div>
-  <div id="overrun"></div>
+<h1>Church Clock App</h1>
 
-  <div id="progressBarContainer">
-    <div id="progressCover"></div>
-  </div>
+<div id="timer">--:--</div>
+<div id="progress-bar-container">
+  <div id="progress-cover"></div>
+</div>
+<div id="overrun"></div>
+<h2 id="section-title">Church Schedule Timer</h2>
 
+<div id="remaining-time">Remaining Schedule Time: --:--</div>
+<div id="total-time">Total Schedule Time: --:--</div>
+<div id="predicted-end">Predicted End: --:--</div>
+
+<div class="bottom-container">
   <div class="controls">
-    <button id="prevBtn">Previous</button>
-    <button id="startBtn">Start</button>
-    <button id="pauseBtn">Pause</button>
-    <button id="nextBtn">Next</button>
+    <button onclick="startTimer()">Start</button>
+    <button onclick="pauseTimer()">Pause</button>
+    <button onclick="resetTimer()">Reset</button>
+    <button onclick="previousSection()">Back</button>
+    <button onclick="nextSection()">Next</button>
   </div>
-
-  <div id="stats">
-    Total: <span id="totalTime">00:00</span> • Predicted End: <span id="predictedEnd">--:--</span>
+  <button class="menu-toggle" onclick="toggleMenu()">Toggle Schedule Menu</button>
+  <div id="menu-section">
+    <div class="controls" style="flex-wrap: nowrap; justify-content: flex-start;">
+      <input type="text" id="section-name" placeholder="Section name" />
+      <input type="number" id="minutes" placeholder="Min" min="0" style="width: 60px; margin-left: 0.5rem" />
+      <input type="number" id="seconds" placeholder="Sec" min="0" max="59" style="width: 60px; margin-left: 0.5rem" />
+      <button onclick="addSection()" style="margin-left: 0.5rem">Add</button>
+    </div>
+    <div id="section-list" ondragover="event.preventDefault()" ondrop="dropSection(event)"></div>
   </div>
+</div>
 
-  <script>
-    // ========== Variables ==========
-    let schedule = [
-      { name: "Intro", duration: 60 },
-      { name: "Main Session", duration: 120 },
-      { name: "Break", duration: 30 },
-      { name: "Wrap-up", duration: 45 },
-    ];
+<script>
+  // Firebase setup
+  const firebaseConfig = {
+    apiKey: "AIzaSyD056thmGLxTwVOU01Qy_KNIqS4aqdW8Bw",
+    authDomain: "clockapp-26b10.firebaseapp.com",
+    projectId: "clockapp-26b10",
+    storageBucket: "clockapp-26b10.firebasestorage.app",
+    messagingSenderId: "381529267609",
+    appId: "1:381529267609:web:3b6565b1b60c2c72acc708",
+    measurementId: "G-SX7DKY8WPQ"
+  };
 
-    let currentIndex = 0;
-    let timeLeft = schedule[0].duration;
-    let isRunning = false;
-    let predictedEndTime = null; // fixed end time
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
 
-    // ========== Utility ==========
-    function format(seconds) {
-      const m = Math.floor(Math.abs(seconds) / 60)
-        .toString()
-        .padStart(2, "0");
-      const s = Math.abs(seconds % 60).toString().padStart(2, "0");
-      return `${m}:${s}`;
+  let sections = [];
+  let currentSection = 0;
+  let timeLeft = 0;
+  let isRunning = false;
+  let dragStartIndex = null;
+  let predictedEndTime = null; // fixed end time for the session
+
+  function format(seconds) {
+    const m = Math.floor(Math.abs(seconds) / 60);
+    const s = Math.abs(seconds) % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  }
+
+  function updateDisplay() {
+    const timerEl = document.getElementById("timer");
+    const overrunEl = document.getElementById("overrun");
+    if (timeLeft >= 0) {
+      timerEl.textContent = format(timeLeft);
+      timerEl.style.color = "#22c55e";
+      overrunEl.textContent = "";
+    } else {
+      timerEl.textContent = "00:00";
+      timerEl.style.color = "#ef4444";
+      overrunEl.textContent = `Overrun: ${format(timeLeft)}`;
+    }
+    updateProgressBar();
+    updateRemainingTime();
+    updateTotalAndEnd();
+  }
+
+  // Persistent colour gradient progress bar
+  function updateProgressBar() {
+    const total = sections[currentSection]?.duration || 1;
+    const remaining = Math.max(timeLeft, 0);
+    const percent = ((total - remaining) / total) * 100;
+    document.getElementById("progress-cover").style.width = `${percent}%`;
+  }
+
+  function updateTitle() {
+    const titleEl = document.getElementById("section-title");
+    titleEl.textContent = sections[currentSection]?.name || "Church Schedule Timer";
+  }
+
+  function updateRemainingTime() {
+    const remainingTimeEl = document.getElementById("remaining-time");
+    let remainingSeconds = timeLeft;
+    for (let i = currentSection + 1; i < sections.length; i++) {
+      remainingSeconds += sections[i].duration;
+    }
+    remainingTimeEl.textContent = "Remaining Schedule Time: " + format(remainingSeconds);
+  }
+
+  function updateTotalAndEnd() {
+    const totalTimeEl = document.getElementById("total-time");
+    const predictedEndEl = document.getElementById("predicted-end");
+    let totalSeconds = sections.reduce((acc, s) => acc + s.duration, 0);
+    totalTimeEl.textContent = "Total Schedule Time: " + format(totalSeconds);
+
+    // Only calculate predicted end once
+    if (!predictedEndTime) {
+      const now = new Date();
+      predictedEndTime = new Date(now.getTime() + totalSeconds * 1000);
     }
 
-    // ========== Core Functions ==========
-    function updateDisplay() {
-      const timerEl = document.getElementById("timer");
-      const overrunEl = document.getElementById("overrun");
-      const sectionEl = document.getElementById("sectionName");
+    predictedEndEl.textContent = "Predicted End: " + 
+      predictedEndTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
 
-      sectionEl.textContent = schedule[currentIndex].name;
+  function saveState() {
+    database.ref('timerState').set({
+      secretKey: 'PickAllPokemons98',
+      sections,
+      currentSection,
+      timeLeft,
+      isRunning,
+    });
+  }
 
-      if (timeLeft >= 0) {
-        timerEl.textContent = format(timeLeft);
-        timerEl.style.color = "#22c55e";
-        overrunEl.textContent = "";
-      } else {
-        timerEl.textContent = "00:00";
-        timerEl.style.color = "#ef4444";
-        overrunEl.textContent = `Overrun: ${format(timeLeft)}`;
-      }
+  function startTimer() {
+    if (!sections[currentSection] || isRunning) return;
+    isRunning = true;
+    saveState();
+  }
 
-      updateProgressBar();
-      updateTotalAndEnd();
+  function pauseTimer() {
+    if (!isRunning) return;
+    isRunning = false;
+    saveState();
+  }
+
+  function resetTimer() {
+    if (sections[currentSection]) {
+      timeLeft = sections[currentSection].duration;
+    } else {
+      timeLeft = 0;
     }
+    isRunning = false;
+    saveState();
+  }
 
-    function updateProgressBar() {
-      const cover = document.getElementById("progressCover");
-      const total = schedule[currentIndex].duration;
-      const remaining = Math.max(timeLeft, 0);
-      const percentElapsed = 100 - (remaining / total) * 100;
-      cover.style.width = `${percentElapsed}%`;
+  function nextSection() {
+    if (currentSection < sections.length - 1) {
+      currentSection++;
+      timeLeft = sections[currentSection].duration || 0;
+      isRunning = true;
+      saveState();
     }
+  }
 
-    function updateTotalAndEnd() {
-      const totalTimeEl = document.getElementById("totalTime");
-      const endTimeEl = document.getElementById("predictedEnd");
-
-      const totalSeconds = schedule.reduce(
-        (acc, s) => acc + s.duration,
-        0
-      );
-      totalTimeEl.textContent = format(totalSeconds);
-
-      // Only calculate once
-      if (!predictedEndTime) {
-        const now = new Date();
-        predictedEndTime = new Date(now.getTime() + totalSeconds * 1000);
-      }
-
-      const hours = predictedEndTime
-        .getHours()
-        .toString()
-        .padStart(2, "0");
-      const minutes = predictedEndTime
-        .getMinutes()
-        .toString()
-        .padStart(2, "0");
-
-      endTimeEl.textContent = `${hours}:${minutes}`;
+  function previousSection() {
+    if (currentSection > 0) {
+      currentSection--;
+      timeLeft = sections[currentSection].duration || 0;
+      isRunning = true;
+      saveState();
     }
+  }
 
-    function nextSection() {
-      if (currentIndex < schedule.length - 1) {
-        currentIndex++;
-        timeLeft = schedule[currentIndex].duration;
-        updateDisplay();
-      }
-    }
+  function addSection() {
+    const name = document.getElementById("section-name").value.trim();
+    const minutes = parseInt(document.getElementById("minutes").value) || 0;
+    const seconds = parseInt(document.getElementById("seconds").value) || 0;
+    const duration = minutes * 60 + seconds;
+    if (!name || duration <= 0) return;
+    sections.push({ name, duration });
+    predictedEndTime = null; // recalc when schedule changes
+    saveState();
+  }
 
-    function prevSection() {
-      if (currentIndex > 0) {
-        currentIndex--;
-        timeLeft = schedule[currentIndex].duration;
-        updateDisplay();
-      }
-    }
+  function removeSection(i) {
+    if (isRunning) return alert("Pause timer before removing sections.");
+    if (i < 0 || i >= sections.length) return;
+    sections.splice(i, 1);
+    if (currentSection >= sections.length) currentSection = sections.length - 1;
+    timeLeft = sections[currentSection]?.duration || 0;
+    predictedEndTime = null;
+    saveState();
+  }
 
-    // ========== Timer Logic ==========
-    setInterval(() => {
-      if (isRunning) {
-        timeLeft--;
-      }
+  function dragStart(e) {
+    dragStartIndex = +e.target.getAttribute("data-index");
+  }
+
+  function dropSection(e) {
+    const dropTarget = e.target.closest(".section-item");
+    if (!dropTarget) return;
+    const dropIndex = +dropTarget.getAttribute("data-index");
+    const item = sections.splice(dragStartIndex, 1)[0];
+    sections.splice(dropIndex, 0, item);
+    predictedEndTime = null;
+    saveState();
+  }
+
+  function renderSections() {
+    const list = document.getElementById("section-list");
+    list.innerHTML = "";
+    sections.forEach((s, i) => {
+      const div = document.createElement("div");
+      div.className = "section-item";
+      div.setAttribute("draggable", true);
+      div.setAttribute("data-index", i);
+      div.ondragstart = dragStart;
+      if (i === currentSection) div.classList.add("active");
+      div.innerHTML = `
+        <span>${s.name} (${format(s.duration)})</span>
+        <button class="remove-btn" onclick="removeSection(${i})">X</button>
+      `;
+      list.appendChild(div);
+    });
+    updateTitle();
+  }
+
+  function toggleMenu() {
+    const menu = document.getElementById("menu-section");
+    menu.style.display = menu.style.display === "block" ? "none" : "block";
+  }
+
+  function listenFirebase() {
+    database.ref('timerState').on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (!data || data.secretKey !== 'PickAllPokemons98') return;
+      sections = data.sections || [];
+      currentSection = data.currentSection ?? 0;
+      timeLeft = data.timeLeft ?? 0;
+      isRunning = data.isRunning || false;
+      renderSections();
       updateDisplay();
-    }, 1000);
+    });
+  }
 
-    // ========== Controls ==========
-    document
-      .getElementById("startBtn")
-      .addEventListener("click", () => (isRunning = true));
-    document
-      .getElementById("pauseBtn")
-      .addEventListener("click", () => (isRunning = false));
-    document
-      .getElementById("nextBtn")
-      .addEventListener("click", nextSection);
-    document
-      .getElementById("prevBtn")
-      .addEventListener("click", prevSection);
+  setInterval(() => {
+    if (isRunning) {
+      timeLeft--;
+      saveState();
+      updateDisplay();
+    }
+  }, 1000);
 
-    // ========== Init ==========
-    updateDisplay();
-  </script>
+  window.onload = listenFirebase;
+</script>
+
 </body>
 </html>
-
