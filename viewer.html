@@ -39,7 +39,7 @@ html, body {
 #progress-bar-container {
   width: 80vw;
   max-width: 500px;
-  height: 15px; /* slightly bigger */
+  height: 15px;
   background: #333;
   border-radius: 10px;
   overflow: hidden;
@@ -70,14 +70,18 @@ html, body {
   margin: 0.2rem 0;
   user-select: none;
 }
-#scale-input-container {
+#scale-container {
   margin: 1rem 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
 }
-#scale-input {
-  width: 60px;
+#scale-label {
+  margin-bottom: 0.25rem;
+}
+#scale-slider {
+  width: 80vw;
+  max-width: 300px;
 }
 
 @media (min-width: 600px) {
@@ -99,10 +103,10 @@ html, body {
 <div id="total-time">Total Schedule Time: --:--</div>
 <div id="predicted-end">Predicted End: --:--</div>
 
-<!-- Scale input -->
-<div id="scale-input-container">
-  <label for="scale-input">Timer Scale:</label>
-  <input id="scale-input" type="number" value="20" min="5" max="50" /> vw
+<!-- Slider for timer scale -->
+<div id="scale-container">
+  <div id="scale-label">Timer Scale</div>
+  <input type="range" id="scale-slider" min="5" max="50" value="20">
 </div>
 
 <script>
@@ -125,11 +129,11 @@ const progressBar = document.getElementById("progress-bar");
 const remainingTimeEl = document.getElementById("remaining-time");
 const totalTimeEl = document.getElementById("total-time");
 const predictedEndEl = document.getElementById("predicted-end");
-const scaleInput = document.getElementById("scale-input");
+const scaleSlider = document.getElementById("scale-slider");
 
-// Adjust timer font size
-scaleInput.addEventListener("input", () => {
-  const scale = parseInt(scaleInput.value) || 20;
+// Update font size using slider
+scaleSlider.addEventListener("input", () => {
+  const scale = scaleSlider.value;
   timerEl.style.fontSize = `${scale}vw`;
 });
 
@@ -137,11 +141,7 @@ function formatTime(seconds) {
   const absSeconds = Math.abs(seconds);
   const h = Math.floor(absSeconds / 3600);
   const m = Math.floor((absSeconds % 3600) / 60);
-  const s = absSeconds % 60;
-  let formatted = "";
-  if(h>0) formatted += `${h}hr `;
-  formatted += `${m}min`;
-  return formatted;
+  return h > 0 ? `${h}hr ${m}min` : `${m}min`;
 }
 
 function formatClock(seconds){
