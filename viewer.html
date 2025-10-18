@@ -10,80 +10,82 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <style>
-  html, body {
-    margin: 0; padding: 0; height: 100%;
-    background-color: #000;
-    color: #fff;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    overflow: hidden;
-    padding: 0 5vw;
-    box-sizing: border-box;
-  }
-  #timer {
-    font-weight: 900;
-    color: #22c55e;
-    line-height: 1;
-    user-select: none;
-    font-size: 20vw;
-    max-font-size: 120px;
-    min-font-size: 40px;
-    padding: 0 5vw;
-    box-sizing: border-box;
-  }
-  #progress-bar-container {
-    width: 80vw;
-    max-width: 500px;
-    height: 10px;
-    background: #333;
-    border-radius: 10px;
-    overflow: hidden;
-    margin: 1rem auto 0.5rem auto;
-  }
-  #progress-bar {
-    height: 100%;
-    width: 0%;
-    background: #22c55e;
-    transition: width 1s linear, background-color 0.5s ease;
-  }
-  #overrun {
-    font-size: 5vw;
-    color: #ef4444;
-    margin: 0.25rem 0 0.5rem 0;
-    min-height: 2.5rem;
-    user-select: none;
-  }
-  #section-title {
-    font-size: 6vw;
-    opacity: 0.8;
-    margin: 0 0 0.5rem 0;
-    user-select: none;
-  }
-  #remaining-time, #total-time, #predicted-end {
-    font-size: 4vw;
-    opacity: 0.6;
-    margin: 0.2rem 0;
-    user-select: none;
-  }
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background-color: #000;
+  color: #fff;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  overflow: hidden;
+  padding: 0 5vw;
+  box-sizing: border-box;
+}
+#timer {
+  font-weight: 900;
+  color: #22c55e;
+  line-height: 1;
+  user-select: none;
+  font-size: 20vw;
+  max-font-size: 120px;
+  min-font-size: 40px;
+  padding: 0 5vw;
+  box-sizing: border-box;
+  transition: font-size 0.2s;
+}
+#progress-bar-container {
+  width: 80vw;
+  max-width: 500px;
+  height: 15px; /* slightly bigger */
+  background: #333;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 1rem auto 0.5rem auto;
+}
+#progress-bar {
+  height: 100%;
+  width: 0%;
+  background: #22c55e;
+  transition: width 1s linear, background-color 0.5s ease;
+}
+#overrun {
+  font-size: 5vw;
+  color: #ef4444;
+  margin: 0.25rem 0 0.5rem 0;
+  min-height: 2.5rem;
+  user-select: none;
+}
+#section-title {
+  font-size: 6vw;
+  opacity: 0.8;
+  margin: 0 0 0.5rem 0;
+  user-select: none;
+}
+#remaining-time, #total-time, #predicted-end {
+  font-size: 4vw;
+  opacity: 0.6;
+  margin: 0.2rem 0;
+  user-select: none;
+}
+#scale-input-container {
+  margin: 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+#scale-input {
+  width: 60px;
+}
 
-  @media (min-width: 600px) {
-    #timer {
-      font-size: 120px !important;
-    }
-    #overrun {
-      font-size: 24px !important;
-    }
-    #section-title {
-      font-size: 32px !important;
-    }
-    #remaining-time, #total-time, #predicted-end {
-      font-size: 16px !important;
-    }
-  }
+@media (min-width: 600px) {
+  #timer { font-size: 120px !important; }
+  #overrun { font-size: 24px !important; }
+  #section-title { font-size: 32px !important; }
+  #remaining-time, #total-time, #predicted-end { font-size: 16px !important; }
+}
 </style>
 </head>
 <body>
@@ -97,111 +99,122 @@
 <div id="total-time">Total Schedule Time: --:--</div>
 <div id="predicted-end">Predicted End: --:--</div>
 
+<!-- Scale input -->
+<div id="scale-input-container">
+  <label for="scale-input">Timer Scale:</label>
+  <input id="scale-input" type="number" value="20" min="5" max="50" /> vw
+</div>
+
 <script>
-  // Your Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyD056thmGLxTwVOU01Qy_KNIqS4aqdW8Bw",
-    authDomain: "clockapp-26b10.firebaseapp.com",
-    projectId: "clockapp-26b10",
-    storageBucket: "clockapp-26b10.firebasestorage.app",
-    messagingSenderId: "381529267609",
-    appId: "1:381529267609:web:3b6565b1b60c2c72acc708",
-    measurementId: "G-SX7DKY8WPQ"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyD056thmGLxTwVOU01Qy_KNIqS4aqdW8Bw",
+  authDomain: "clockapp-26b10.firebaseapp.com",
+  projectId: "clockapp-26b10",
+  storageBucket: "clockapp-26b10.firebasestorage.app",
+  messagingSenderId: "381529267609",
+  appId: "1:381529267609:web:3b6565b1b60c2c72acc708",
+  measurementId: "G-SX7DKY8WPQ"
+};
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
 
-  firebase.initializeApp(firebaseConfig);
-  const database = firebase.database();
+const timerEl = document.getElementById("timer");
+const overrunEl = document.getElementById("overrun");
+const sectionTitleEl = document.getElementById("section-title");
+const progressBar = document.getElementById("progress-bar");
+const remainingTimeEl = document.getElementById("remaining-time");
+const totalTimeEl = document.getElementById("total-time");
+const predictedEndEl = document.getElementById("predicted-end");
+const scaleInput = document.getElementById("scale-input");
 
-  const timerEl = document.getElementById("timer");
-  const overrunEl = document.getElementById("overrun");
-  const sectionTitleEl = document.getElementById("section-title");
-  const progressBar = document.getElementById("progress-bar");
-  const remainingTimeEl = document.getElementById("remaining-time");
-  const totalTimeEl = document.getElementById("total-time");
-  const predictedEndEl = document.getElementById("predicted-end");
+// Adjust timer font size
+scaleInput.addEventListener("input", () => {
+  const scale = parseInt(scaleInput.value) || 20;
+  timerEl.style.fontSize = `${scale}vw`;
+});
 
-  function format(seconds) {
-    const m = Math.floor(Math.abs(seconds) / 60);
-    const s = Math.abs(seconds) % 60;
-    return `${m}:${s.toString().padStart(2, "0")}`;
+function formatTime(seconds) {
+  const absSeconds = Math.abs(seconds);
+  const h = Math.floor(absSeconds / 3600);
+  const m = Math.floor((absSeconds % 3600) / 60);
+  const s = absSeconds % 60;
+  let formatted = "";
+  if(h>0) formatted += `${h}hr `;
+  formatted += `${m}min`;
+  return formatted;
+}
+
+function formatClock(seconds){
+  const m=Math.floor(Math.abs(seconds)/60);
+  const s=Math.abs(seconds)%60;
+  return `${m}:${s.toString().padStart(2,'0')}`;
+}
+
+function updateProgressBar(timeLeft, total){
+  if(total<=0) return;
+  const remaining=Math.max(timeLeft,0);
+  const percent=((total-remaining)/total)*100;
+  progressBar.style.width=`${percent}%`;
+  if(percent<50) progressBar.style.backgroundColor="#22c55e";
+  else if(percent<80) progressBar.style.backgroundColor="#facc15";
+  else progressBar.style.backgroundColor="#ef4444";
+}
+
+function calculateRemaining(sections,currentSection,timeLeft){
+  let remainingSeconds = timeLeft;
+  for(let i=currentSection+1;i<sections.length;i++) remainingSeconds+=sections[i].duration;
+  return remainingSeconds;
+}
+
+function calculateTotal(sections){
+  return sections.reduce((acc,s)=>acc+s.duration,0);
+}
+
+function updateUI(data){
+  if(!data){
+    timerEl.textContent="--:--";
+    sectionTitleEl.textContent="No Timer Data";
+    progressBar.style.width="0%";
+    overrunEl.textContent="";
+    remainingTimeEl.textContent="Remaining Schedule Time: --:--";
+    totalTimeEl.textContent="Total Schedule Time: --:--";
+    predictedEndEl.textContent="Predicted End: --:--";
+    return;
   }
 
-  function updateProgressBar(timeLeft, total) {
-    if (total <= 0) return;
-    const remaining = Math.max(timeLeft, 0);
-    const percent = ((total - remaining) / total) * 100;
-    progressBar.style.width = `${percent}%`;
+  const sections = data.sections||[];
+  const currentSection = data.currentSection??0;
+  let timeLeft = data.timeLeft??0;
 
-    if (percent < 50) {
-      progressBar.style.backgroundColor = "#22c55e";
-    } else if (percent < 80) {
-      progressBar.style.backgroundColor = "#facc15";
-    } else {
-      progressBar.style.backgroundColor = "#ef4444";
-    }
+  sectionTitleEl.textContent=sections[currentSection]?.name || "No Active Section";
+
+  if(timeLeft>=0){
+    timerEl.textContent=formatClock(timeLeft);
+    timerEl.style.color="#22c55e";
+    overrunEl.textContent="";
+  } else {
+    timerEl.textContent="00:00";
+    timerEl.style.color="#ef4444";
+    overrunEl.textContent=`Overrun: ${formatClock(timeLeft)}`;
   }
 
-  function calculateRemaining(sections, currentSection, timeLeft) {
-    let remainingSeconds = timeLeft;
-    for (let i = currentSection + 1; i < sections.length; i++) {
-      remainingSeconds += sections[i].duration;
-    }
-    return remainingSeconds;
-  }
+  const totalDuration = sections[currentSection]?.duration || 1;
+  updateProgressBar(timeLeft,totalDuration);
 
-  function calculateTotal(sections) {
-    return sections.reduce((acc, s) => acc + s.duration, 0);
-  }
+  const remainingSeconds=calculateRemaining(sections,currentSection,timeLeft);
+  remainingTimeEl.textContent="Remaining Schedule Time: "+formatTime(remainingSeconds);
 
-  function updateUI(data) {
-    if (!data) {
-      timerEl.textContent = "--:--";
-      sectionTitleEl.textContent = "No Timer Data";
-      progressBar.style.width = "0%";
-      overrunEl.textContent = "";
-      remainingTimeEl.textContent = "Remaining Schedule Time: --:--";
-      totalTimeEl.textContent = "Total Schedule Time: --:--";
-      predictedEndEl.textContent = "Predicted End: --:--";
-      return;
-    }
+  const totalSeconds=calculateTotal(sections);
+  totalTimeEl.textContent="Total Schedule Time: "+formatTime(totalSeconds);
 
-    const sections = data.sections || [];
-    const currentSection = data.currentSection ?? 0;
-    let timeLeft = data.timeLeft ?? 0;
+  const now=new Date();
+  const predictedEnd=new Date(now.getTime()+remainingSeconds*1000);
+  predictedEndEl.textContent="Predicted End: "+predictedEnd.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
 
-    if (sections[currentSection]) {
-      sectionTitleEl.textContent = sections[currentSection].name;
-    } else {
-      sectionTitleEl.textContent = "No Active Section";
-    }
-
-    if (timeLeft >= 0) {
-      timerEl.textContent = format(timeLeft);
-      timerEl.style.color = "#22c55e";
-      overrunEl.textContent = "";
-    } else {
-      timerEl.textContent = "00:00";
-      timerEl.style.color = "#ef4444";
-      overrunEl.textContent = `Overrun: ${format(timeLeft)}`;
-    }
-
-    const totalDuration = sections[currentSection]?.duration || 1;
-    updateProgressBar(timeLeft, totalDuration);
-
-    const remainingSeconds = calculateRemaining(sections, currentSection, timeLeft);
-    remainingTimeEl.textContent = "Remaining Schedule Time: " + format(remainingSeconds);
-
-    const totalSeconds = calculateTotal(sections);
-    totalTimeEl.textContent = "Total Schedule Time: " + format(totalSeconds);
-
-    const now = new Date();
-    const predictedEnd = new Date(now.getTime() + remainingSeconds * 1000);
-    predictedEndEl.textContent = "Predicted End: " + predictedEnd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-
-  database.ref('timerState').on('value', (snapshot) => {
-    updateUI(snapshot.val());
-  });
+database.ref('timerState').on('value',(snapshot)=>{
+  updateUI(snapshot.val());
+});
 </script>
 </body>
 </html>
