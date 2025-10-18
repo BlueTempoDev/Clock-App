@@ -81,18 +81,8 @@ const database = firebase.database();
 let sections=[], currentSection=0, timeLeft=0, isRunning=false, dragStartIndex=null, totalDelay=0;
 
 // Formatters
-function format(seconds){
-  const m=Math.floor(Math.abs(seconds)/60);
-  const s=Math.abs(seconds)%60;
-  return `${m}:${s.toString().padStart(2,'0')}`;
-}
-function formatHMS(seconds){
-  const absSec=Math.abs(seconds);
-  const h=Math.floor(absSec/3600);
-  const m=Math.floor((absSec%3600)/60);
-  const s=absSec%60;
-  return h>0?`${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`:`${m}:${s.toString().padStart(2,'0')}`;
-}
+function format(seconds){ const m=Math.floor(Math.abs(seconds)/60); const s=Math.abs(seconds)%60; return `${m}:${s.toString().padStart(2,'0')}`; }
+function formatHMS(seconds){ const absSec=Math.abs(seconds); const h=Math.floor(absSec/3600); const m=Math.floor((absSec%3600)/60); const s=absSec%60; return h>0?`${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`:`${m}:${s.toString().padStart(2,'0')}`; }
 
 // Display updates
 function updateDisplay(){
@@ -167,8 +157,27 @@ function saveState(){
 function startTimer(){ if(!sections[currentSection]||isRunning) return; isRunning=true; saveState(); }
 function pauseTimer(){ if(!isRunning) return; isRunning=false; saveState(); }
 function resetTimer(){ timeLeft=sections[currentSection]?.duration||0; isRunning=false; saveState(); }
-function nextSection(){ if(currentSection<sections.length-1){ currentSection++; timeLeft=sections[currentSection]?.duration||0; isRunning=true; saveState(); } }
-function previousSection(){ if(currentSection>0){ currentSection--; timeLeft=sections[currentSection]?.duration||0; isRunning=true; saveState(); } }
+
+// ✅ Updated functions to reset totalDelay when switching sections
+function nextSection(){ 
+  if(currentSection<sections.length-1){ 
+    currentSection++; 
+    timeLeft=sections[currentSection]?.duration||0; 
+    totalDelay=0; 
+    isRunning=true; 
+    saveState(); 
+  } 
+}
+function previousSection(){ 
+  if(currentSection>0){ 
+    currentSection--; 
+    timeLeft=sections[currentSection]?.duration||0; 
+    totalDelay=0; 
+    isRunning=true; 
+    saveState(); 
+  } 
+}
+
 function addSection(){
   const name=document.getElementById("section-name").value.trim();
   const minutes=parseInt(document.getElementById("minutes").value)||0;
@@ -197,7 +206,6 @@ function listenFirebase(){
     sections=data.sections||[];
     currentSection=data.currentSection??0;
 
-    // Use server timestamp to adjust timeLeft
     if(data.lastUpdated){
       const elapsed=Math.floor((Date.now() - data.lastUpdated)/1000);
       timeLeft=(data.timeLeft??(sections[currentSection]?.duration||0)) - (data.isRunning?elapsed:0);
@@ -218,7 +226,7 @@ setInterval(()=>{
   if(isRunning){
     timeLeft--;
     if(timeLeft<0) totalDelay++;
-    saveState(); // continuously sync to Firebase
+    saveState();
   }
   updateDisplay();
 },1000);
