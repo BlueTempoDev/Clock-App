@@ -124,20 +124,20 @@ const scaleSlider = document.getElementById("scale-slider");
 let sections = [];
 let currentSection = 0;
 let timeLeft = 0;
-let lastUpdate = Date.now();
 
+// Timer scale slider
 scaleSlider.addEventListener("input", () => {
   timerEl.style.fontSize = scaleSlider.value + "px";
 });
 
-function formatTime(seconds) {
-  const hrs = Math.floor(Math.abs(seconds)/3600);
-  const mins = Math.floor((Math.abs(seconds)%3600)/60);
-  const secs = Math.floor(Math.abs(seconds)%60);
-  if (hrs>0) return `${hrs}h ${mins}m ${secs}s`;
-  return `${mins}m ${secs}s`;
+// Format seconds as MM:SS (no hours)
+function formatMMSS(seconds) {
+  const m = Math.floor(Math.abs(seconds) / 60);
+  const s = Math.abs(seconds) % 60;
+  return `${m}:${s.toString().padStart(2,"0")}`;
 }
 
+// Update progress bar
 function updateProgressBar(timeLeft, total) {
   if (!total) return;
   const percent = Math.max(0, Math.min(100, ((total - timeLeft)/total)*100));
@@ -147,18 +147,21 @@ function updateProgressBar(timeLeft, total) {
   else progressBar.style.backgroundColor="#ef4444";
 }
 
+// Calculate remaining schedule
 function calculateRemaining() {
   let rem = timeLeft;
   for(let i=currentSection+1;i<sections.length;i++) rem += sections[i].duration;
   return rem;
 }
 
+// Calculate total schedule
 function calculateTotal() {
   return sections.reduce((acc,s)=>acc+s.duration,0);
 }
 
-function updateUI() {
-  if(!sections.length){
+// Update UI from Firebase snapshot
+function updateUI(data){
+  if(!data || data.secretKey!=='PickAllPokemons98'){
     timerEl.textContent="--:--";
     sectionTitleEl.textContent="No Timer Data";
     progressBar.style.width="0%";
@@ -169,46 +172,37 @@ function updateUI() {
     return;
   }
 
+  sections = data.sections || [];
+  currentSection = data.currentSection ?? 0;
+  timeLeft = data.timeLeft ?? 0;
+
   const section = sections[currentSection] || {name:"No Active Section", duration:1};
   sectionTitleEl.textContent = section.name;
 
-  const now = Date.now();
-  let syncedTimeLeft = timeLeft - Math.floor((now - lastUpdate)/1000);
-
-  if(syncedTimeLeft>=0){
-    timerEl.textContent = formatTime(syncedTimeLeft);
+  // Display timeLeft exactly from Firebase
+  if(timeLeft>=0){
+    timerEl.textContent = formatMMSS(timeLeft);
     timerEl.style.color="#22c55e";
     overrunEl.textContent="";
   } else {
     timerEl.textContent="00:00";
     timerEl.style.color="#ef4444";
-    overrunEl.textContent="Overrun: "+formatTime(syncedTimeLeft);
+    overrunEl.textContent="Overrun: "+formatMMSS(timeLeft);
   }
 
-  updateProgressBar(syncedTimeLeft, section.duration);
+  updateProgressBar(timeLeft, section.duration);
 
-  remainingTimeEl.textContent = "Remaining Schedule Time: "+formatTime(calculateRemaining());
-  totalTimeEl.textContent = "Total Schedule Time: "+formatTime(calculateTotal());
+  remainingTimeEl.textContent="Remaining Schedule Time: "+formatMMSS(calculateRemaining());
+  totalTimeEl.textContent="Total Schedule Time: "+formatMMSS(calculateTotal());
 
-  const predictedEnd = new Date(now + calculateRemaining()*1000);
-  predictedEndEl.textContent = "Predicted End: "+predictedEnd.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  const predictedEnd = new Date(Date.now() + calculateRemaining()*1000);
+  predictedEndEl.textContent="Predicted End: "+predictedEnd.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
 }
 
-// Sync with Firebase
+// Listen to Firebase and update immediately
 database.ref('timerState').on('value', snapshot => {
-  const data = snapshot.val();
-  if(!data || data.secretKey !== 'PickAllPokemons98') return;
-
-  sections = data.sections || [];
-  currentSection = data.currentSection ?? 0;
-  timeLeft = data.timeLeft ?? 0;
-  lastUpdate = Date.now();
-
-  updateUI();
+  updateUI(snapshot.val());
 });
-
-// Smooth update every second
-setInterval(updateUI, 1000);
 </script>
 </body>
 </html>
