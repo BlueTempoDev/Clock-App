@@ -28,14 +28,14 @@ html, body {
   color: #22c55e;
   line-height: 1;
   user-select: none;
-  font-size: 22vw; /* slightly bigger */
+  font-size: 22vw;
   padding: 0 5vw;
   box-sizing: border-box;
 }
 #progress-bar-container {
   width: 95%;
   max-width: 650px;
-  height: 25px; /* slightly taller */
+  height: 25px;
   background: #333;
   border-radius: 12px;
   overflow: hidden;
@@ -110,14 +110,17 @@ let sections = [];
 let currentSection = 0;
 let timeLeft = 0;
 
-// Format seconds as MM:SS
-function formatMMSS(seconds) {
-  const m = Math.floor(Math.abs(seconds)/60);
-  const s = Math.abs(seconds)%60;
+// Format seconds as H:MM:SS or HH:MM if hours exist
+function formatHMS(seconds) {
+  const absSec = Math.abs(seconds);
+  const h = Math.floor(absSec / 3600);
+  const m = Math.floor((absSec % 3600) / 60);
+  const s = absSec % 60;
+  if (h > 0) return `${h}:${m.toString().padStart(2,"0")}:${s.toString().padStart(2,"0")}`;
   return `${m}:${s.toString().padStart(2,"0")}`;
 }
 
-// Update progress bar (green → orange → red)
+// Update progress bar (green → yellow → red)
 function updateProgressBar(timeLeft, total) {
   if (!total) return;
   const percent = Math.max(0, Math.min(100, ((total - timeLeft)/total)*100));
@@ -160,20 +163,20 @@ function updateUI(data){
   sectionTitleEl.textContent = section.name;
 
   if(timeLeft>=0){
-    timerEl.textContent = formatMMSS(timeLeft);
+    timerEl.textContent = formatHMS(timeLeft);
     timerEl.style.color="#22c55e";
     overrunEl.textContent="";
   } else {
     timerEl.textContent="00:00";
     timerEl.style.color="#ef4444";
-    overrunEl.textContent="Overrun: "+formatMMSS(timeLeft);
+    overrunEl.textContent="Overrun: "+formatHMS(timeLeft);
   }
 
   updateProgressBar(timeLeft, section.duration);
-  remainingTimeEl.textContent="Remaining Schedule Time: "+formatMMSS(calculateRemaining());
-  totalTimeEl.textContent="Total Schedule Time: "+formatMMSS(calculateTotal());
+  remainingTimeEl.textContent="Remaining Schedule Time: "+formatHMS(calculateRemaining());
+  totalTimeEl.textContent="Total Schedule Time: "+formatHMS(calculateTotal());
 
-  // Predicted end in HH:MM format
+  // Predicted end in HH:MM
   const predicted = new Date(Date.now() + calculateRemaining()*1000);
   const hh = predicted.getHours().toString().padStart(2,'0');
   const mm = predicted.getMinutes().toString().padStart(2,'0');
