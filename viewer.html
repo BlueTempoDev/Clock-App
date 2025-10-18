@@ -24,33 +24,33 @@ html, body {
   padding: 0 5vw;
   box-sizing: border-box;
 }
+
 #timer {
   font-weight: 900;
   color: #22c55e;
   line-height: 1;
   user-select: none;
   font-size: 20vw;
-  max-font-size: 120px;
-  min-font-size: 40px;
-  padding: 0 5vw;
-  box-sizing: border-box;
   transition: font-size 0.2s;
 }
+
 #progress-bar-container {
-  width: 80vw;
-  max-width: 500px;
-  height: 15px;
+  width: 90vw;
+  max-width: 600px;
+  height: 20px;
   background: #333;
   border-radius: 10px;
   overflow: hidden;
   margin: 1rem auto 0.5rem auto;
 }
+
 #progress-bar {
   height: 100%;
   width: 0%;
   background: #22c55e;
-  transition: width 1s linear, background-color 0.5s ease;
+  transition: width 0.5s linear, background-color 0.5s ease;
 }
+
 #overrun {
   font-size: 5vw;
   color: #ef4444;
@@ -58,27 +58,32 @@ html, body {
   min-height: 2.5rem;
   user-select: none;
 }
+
 #section-title {
   font-size: 6vw;
   opacity: 0.8;
   margin: 0 0 0.5rem 0;
   user-select: none;
 }
+
 #remaining-time, #total-time, #predicted-end {
   font-size: 4vw;
   opacity: 0.6;
   margin: 0.2rem 0;
   user-select: none;
 }
+
 #scale-container {
   margin: 1rem 0;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
+
 #scale-label {
   margin-bottom: 0.25rem;
 }
+
 #scale-slider {
   width: 80vw;
   max-width: 300px;
@@ -103,7 +108,6 @@ html, body {
 <div id="total-time">Total Schedule Time: --:--</div>
 <div id="predicted-end">Predicted End: --:--</div>
 
-<!-- Slider for timer scale -->
 <div id="scale-container">
   <div id="scale-label">Timer Scale</div>
   <input type="range" id="scale-slider" min="5" max="50" value="20">
@@ -131,45 +135,50 @@ const totalTimeEl = document.getElementById("total-time");
 const predictedEndEl = document.getElementById("predicted-end");
 const scaleSlider = document.getElementById("scale-slider");
 
-// Update font size using slider
+// Timer scale slider
 scaleSlider.addEventListener("input", () => {
-  const scale = scaleSlider.value;
-  timerEl.style.fontSize = `${scale}vw`;
+  timerEl.style.fontSize = `${scaleSlider.value}vw`;
 });
 
-function formatTime(seconds) {
-  const absSeconds = Math.abs(seconds);
-  const h = Math.floor(absSeconds / 3600);
-  const m = Math.floor((absSeconds % 3600) / 60);
-  return h > 0 ? `${h}hr ${m}min` : `${m}min`;
-}
-
+// Format seconds into mm:ss
 function formatClock(seconds){
-  const m=Math.floor(Math.abs(seconds)/60);
-  const s=Math.abs(seconds)%60;
+  const m = Math.floor(Math.abs(seconds)/60);
+  const s = Math.abs(seconds)%60;
   return `${m}:${s.toString().padStart(2,'0')}`;
 }
 
+// Format seconds into hr min (e.g., 1hr 3min)
+function formatTime(seconds){
+  const absSeconds = Math.abs(seconds);
+  const h = Math.floor(absSeconds/3600);
+  const m = Math.floor((absSeconds%3600)/60);
+  return h>0 ? `${h}hr ${m}min` : `${m}min`;
+}
+
+// Progress bar coloring green → orange → red
 function updateProgressBar(timeLeft, total){
   if(total<=0) return;
-  const remaining=Math.max(timeLeft,0);
-  const percent=((total-remaining)/total)*100;
-  progressBar.style.width=`${percent}%`;
+  const remaining = Math.max(timeLeft,0);
+  const percent = ((total-remaining)/total)*100;
+  progressBar.style.width = `${percent}%`;
   if(percent<50) progressBar.style.backgroundColor="#22c55e";
   else if(percent<80) progressBar.style.backgroundColor="#facc15";
   else progressBar.style.backgroundColor="#ef4444";
 }
 
+// Calculate remaining schedule seconds
 function calculateRemaining(sections,currentSection,timeLeft){
   let remainingSeconds = timeLeft;
   for(let i=currentSection+1;i<sections.length;i++) remainingSeconds+=sections[i].duration;
   return remainingSeconds;
 }
 
+// Calculate total schedule seconds
 function calculateTotal(sections){
   return sections.reduce((acc,s)=>acc+s.duration,0);
 }
 
+// Update all UI
 function updateUI(data){
   if(!data){
     timerEl.textContent="--:--";
@@ -201,20 +210,28 @@ function updateUI(data){
   const totalDuration = sections[currentSection]?.duration || 1;
   updateProgressBar(timeLeft,totalDuration);
 
-  const remainingSeconds=calculateRemaining(sections,currentSection,timeLeft);
+  const remainingSeconds = calculateRemaining(sections,currentSection,timeLeft);
   remainingTimeEl.textContent="Remaining Schedule Time: "+formatTime(remainingSeconds);
 
-  const totalSeconds=calculateTotal(sections);
+  const totalSeconds = calculateTotal(sections);
   totalTimeEl.textContent="Total Schedule Time: "+formatTime(totalSeconds);
 
-  const now=new Date();
-  const predictedEnd=new Date(now.getTime()+remainingSeconds*1000);
+  const predictedEnd = new Date(Date.now() + remainingSeconds*1000);
   predictedEndEl.textContent="Predicted End: "+predictedEnd.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
 }
 
+// Live Firebase listener
 database.ref('timerState').on('value',(snapshot)=>{
   updateUI(snapshot.val());
 });
+
+// Update UI every second to refresh progress bar & predicted end
+setInterval(()=>{
+  database.ref('timerState').once('value').then(snapshot=>{
+    updateUI(snapshot.val());
+  });
+},1000);
+
 </script>
 </body>
 </html>
