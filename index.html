@@ -16,8 +16,8 @@ h1 { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font
 #timer { font-size: 12rem; font-weight: 900; margin: 0; user-select: none; line-height: 1; }
 #progress-bar-container { width: 80%; height: 50px; background: #333; border-radius: 10px; overflow: hidden; margin: 1rem auto 0.5rem auto; position: relative; }
 #progress-bar { height: 100%; width: 100%; background-color: #22c55e; transition: width 1s linear, background-color 0.5s linear; }
-#overrun, #remaining-time, #predicted-end { font-size: 2rem; opacity: 0.8; margin: 0.25rem 0; user-select: none; }
-#overrun { color: #ef4444; font-size: 3rem; min-height: 3rem; }
+#overrun, #remaining-time { font-size: 2.5rem; opacity: 0.9; margin: 0.25rem 0; user-select: none; }
+#overrun { color: #ef4444; min-height: 3rem; }
 #section-title { font-size: 3rem; opacity: 0.9; margin: 0.5rem 0; user-select: none; }
 .bottom-container { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 600px; background: #111; border-top: 2px solid #22c55e; padding: 1rem 1rem 2rem 1rem; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 1rem; z-index: 10; }
 .controls { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.5rem; width: 100%; }
@@ -39,9 +39,7 @@ button { padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; min-width: 80px
 <div id="progress-bar-container"><div id="progress-bar"></div></div>
 <div id="overrun"></div>
 <h2 id="section-title">Church Schedule Timer</h2>
-
 <div id="remaining-time">Remaining Schedule Time: --:--</div>
-<div id="predicted-end">Predicted End: --:--</div>
 
 <div class="bottom-container">
   <div class="controls">
@@ -99,7 +97,6 @@ function updateDisplay(){
 
   updateProgressBar();
   updateRemainingTime();
-  updatePredictedEnd();
 }
 
 function updateProgressBar(){
@@ -124,16 +121,6 @@ function updateRemainingTime(){
   remainingTimeEl.textContent="Remaining Schedule Time: "+formatHMS(remainingSeconds);
 }
 
-function updatePredictedEnd(){
-  const predictedEndEl=document.getElementById("predicted-end");
-  let remainingSeconds=Math.max(timeLeft,0)+overrunTime;
-  for(let i=currentSection+1;i<sections.length;i++) remainingSeconds+=sections[i].duration;
-
-  const now=new Date();
-  const predictedEnd=new Date(now.getTime()+remainingSeconds*1000);
-  predictedEndEl.textContent="Predicted End: "+predictedEnd.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-}
-
 // Firebase save
 function saveState(){
   database.ref('timerState').set({
@@ -154,7 +141,7 @@ function resetTimer(){ timeLeft=sections[currentSection]?.duration||0; overrunTi
 
 function nextSection(){ 
   if(currentSection<sections.length-1){ 
-    if(timeLeft<0) overrunTime=Math.abs(timeLeft); else overrunTime=0; // record overrun
+    if(timeLeft<0) overrunTime=Math.abs(timeLeft); else overrunTime=0;
     currentSection++; 
     timeLeft=sections[currentSection]?.duration||0; 
     overrunTime=0; 
