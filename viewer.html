@@ -20,7 +20,7 @@ html, body {
   align-items: center;
   text-align: center;
   overflow: hidden;
-  padding: 0 5vw;
+  padding: 0 2vw;
   box-sizing: border-box;
 }
 #timer {
@@ -29,47 +29,45 @@ html, body {
   line-height: 1;
   user-select: none;
   font-size: 22vw;
-  padding: 0 5vw;
-  box-sizing: border-box;
 }
 #progress-bar-container {
-  width: 95%;
-  max-width: 650px;
-  height: 40px;
+  width: 100%;
+  max-width: 1200px; /* match index width */
+  height: 50px; /* index bar height */
   background: #333;
   border-radius: 12px;
   overflow: hidden;
-  margin: 1rem auto 0.5rem auto;
+  margin: 1rem 0;
 }
 #progress-bar {
   height: 100%;
   width: 100%;
-  background-color: #22c55e;
+  background: #22c55e;
   transition: width 0.25s linear, background-color 0.25s linear;
 }
 #overrun {
-  font-size: 6vw;
+  font-size: 4vw;
   color: #ef4444;
   margin: 0.25rem 0 0.5rem 0;
   min-height: 2rem;
   user-select: none;
 }
 #section-title {
-  font-size: 8vw;
+  font-size: 6vw;
   opacity: 0.9;
   margin: 0 0 0.5rem 0;
   user-select: none;
 }
 #remaining-time {
-  font-size: 5vw;
+  font-size: 4vw;
   opacity: 0.8;
   margin: 0.2rem 0;
   user-select: none;
 }
 @media (min-width: 600px) {
-  #timer { font-size: 140px !important; }
-  #overrun { font-size: 36px !important; }
-  #section-title { font-size: 48px !important; }
+  #timer { font-size: 130px !important; }
+  #overrun { font-size: 28px !important; }
+  #section-title { font-size: 36px !important; }
   #remaining-time { font-size: 24px !important; }
 }
 </style>
@@ -108,46 +106,38 @@ let timeLeft = 0;
 let overrunTime = 0;
 let isRunning = false;
 let lastUpdated = Date.now();
-let currentSectionDuration = 1;
 
-// Format seconds to MM:SS
 function formatHMS(seconds) {
-  seconds = Math.floor(seconds);
-  const absSec = Math.abs(seconds);
+  const absSec = Math.abs(Math.floor(seconds));
   const h = Math.floor(absSec / 3600);
   const m = Math.floor((absSec % 3600) / 60);
   const s = absSec % 60;
-  if(h>0) return `${h}:${m.toString().padStart(2,"0")}:${s.toString().padStart(2,"0")}`;
-  return `${m}:${s.toString().padStart(2,"0")}`;
+  return h > 0 ? `${h}:${m.toString().padStart(2,"0")}:${s.toString().padStart(2,"0")}` : `${m}:${s.toString().padStart(2,"0")}`;
 }
 
-// Calculate remaining schedule time
 function calculateRemaining(displayTime) {
   let rem = Math.max(displayTime,0) + overrunTime;
   for(let i=currentSection+1;i<sections.length;i++) rem += sections[i].duration;
   return rem;
 }
 
-// Render UI
 function renderUI(displayTime){
-  displayTime = Math.floor(displayTime); // ensure whole seconds
   const section = sections[currentSection] || {name:"No Active Section", duration:1};
   sectionTitleEl.textContent = section.name;
-  currentSectionDuration = section.duration;
 
-  // Timer
+  // Timer display
   if(displayTime >= 0){
     timerEl.textContent = formatHMS(displayTime);
-    timerEl.style.color = "#22c55e";
-    overrunEl.textContent = overrunTime>0?`Overrun: ${formatHMS(overrunTime)}`:'';
+    timerEl.style.color="#22c55e";
+    overrunEl.textContent = overrunTime>0 ? `Overrun: ${formatHMS(overrunTime)}` : '';
   } else {
-    timerEl.textContent = "00:00";
-    timerEl.style.color = "#ef4444";
-    overrunEl.textContent = "Overrun: " + formatHMS(displayTime);
+    timerEl.textContent="00:00";
+    timerEl.style.color="#ef4444";
+    overrunEl.textContent="Overrun: "+formatHMS(Math.abs(displayTime));
   }
 
-  // Progress bar shrinks from full to 0
-  let percent = displayTime >= 0 ? (displayTime / section.duration) * 100 : 0;
+  // Progress bar shrinks with time
+  let percent = displayTime >= 0 ? (displayTime/section.duration)*100 : 0;
   percent = Math.min(100, Math.max(0, percent));
   progressBar.style.width = percent+"%";
 
@@ -156,15 +146,13 @@ function renderUI(displayTime){
   else if(percent > 20) progressBar.style.backgroundColor="#f97316";
   else progressBar.style.backgroundColor="#ef4444";
 
-  // Remaining schedule time
-  remainingTimeEl.textContent = "Remaining Schedule Time: " + formatHMS(calculateRemaining(displayTime));
+  remainingTimeEl.textContent="Remaining Schedule Time: "+formatHMS(calculateRemaining(displayTime));
 }
 
 // Firebase real-time listener
 database.ref('timerState').on('value', snapshot => {
   const data = snapshot.val();
   if(!data || data.secretKey!=='PickAllPokemons98') return;
-
   sections = data.sections || [];
   currentSection = data.currentSection ?? 0;
   timeLeft = data.timeLeft ?? 0;
@@ -183,7 +171,7 @@ setInterval(()=>{
   }
   renderUI(displayTime);
 }, 250);
-</script>
 
+</script>
 </body>
 </html>
