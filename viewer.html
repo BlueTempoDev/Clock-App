@@ -2,64 +2,86 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Church Clock App - Firebase Driven</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Church Clock Viewer</title>
 
-<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <style>
-html, body { margin: 0; padding: 0; height: 100%; background-color: #000; color: #fff; font-family: sans-serif; overflow-x: hidden; }
-body { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; box-sizing: border-box; padding-bottom: 200px; text-align: center; }
-h1 { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font-size: 2rem; opacity: 0.7; margin: 0; user-select: none; }
-#timer { font-size: 12rem; font-weight: 900; margin: 0; user-select: none; line-height: 1; }
-#progress-bar-container { width: 80%; height: 50px; background: #333; border-radius: 10px; overflow: hidden; margin: 1rem auto 0.5rem auto; position: relative; }
-#progress-bar { height: 100%; width: 100%; background-color: #22c55e; transition: width 1s linear, background-color 0.5s linear; }
-#overrun, #remaining-time { font-size: 2.5rem; opacity: 0.9; margin: 0.25rem 0; user-select: none; }
-#overrun { color: #ef4444; min-height: 3rem; }
-#section-title { font-size: 3rem; opacity: 0.9; margin: 0.5rem 0; user-select: none; }
-.bottom-container { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 600px; background: #111; border-top: 2px solid #22c55e; padding: 1rem 1rem 2rem 1rem; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 1rem; z-index: 10; }
-.controls { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.5rem; width: 100%; }
-button { padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; min-width: 80px; user-select: none; }
-.menu-toggle { background: #444; color: #fff; border: none; padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; width: 100%; max-width: 600px; text-align: center; user-select: none; }
-#menu-section { display: none; width: 100%; max-width: 600px; background: #222; padding: 1rem; border-radius: 8px; box-sizing: border-box; user-select: none; max-height: 200px; overflow-y: auto; }
-#menu-section .controls { justify-content: flex-start; gap: 0.5rem; flex-wrap: nowrap; margin-bottom: 1rem; }
-#section-list { max-height: 120px; overflow-y: auto; }
-.section-item { display: flex; justify-content: space-between; align-items: center; background: #111; margin-bottom: 0.5rem; padding: 0.5rem; border-radius: 5px; cursor: move; }
-.section-item.active { border: 2px solid #22c55e; }
-.remove-btn { background: #ef4444; color: white; border: none; padding: 0.3rem 0.6rem; cursor: pointer; }
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background-color: #000;
+  color: #fff;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  overflow: hidden;
+  padding: 0 5vw;
+  box-sizing: border-box;
+}
+#timer {
+  font-weight: 900;
+  color: #22c55e;
+  line-height: 1;
+  user-select: none;
+  font-size: 25vw;
+  padding: 0 5vw;
+  box-sizing: border-box;
+}
+#progress-bar-container {
+  width: 95%;
+  max-width: 650px;
+  height: 40px;
+  background: #333;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 1rem auto 0.5rem auto;
+}
+#progress-bar {
+  height: 100%;
+  width: 100%;
+  background: #22c55e;
+  transition: width 0.25s linear, background-color 0.25s linear;
+}
+#overrun {
+  font-size: 6vw;
+  color: #ef4444;
+  margin: 0.25rem 0 0.5rem 0;
+  min-height: 2rem;
+  user-select: none;
+}
+#section-title {
+  font-size: 8vw;
+  opacity: 0.9;
+  margin: 0 0 0.5rem 0;
+  user-select: none;
+}
+#remaining-time, #predicted-end {
+  font-size: 5vw;
+  opacity: 0.8;
+  margin: 0.2rem 0;
+  user-select: none;
+}
+@media (min-width: 600px) {
+  #timer { font-size: 140px !important; }
+  #overrun { font-size: 36px !important; }
+  #section-title { font-size: 48px !important; }
+  #remaining-time, #predicted-end { font-size: 24px !important; }
+}
 </style>
 </head>
 <body>
 
-<h1>Church Clock App</h1>
-
 <div id="timer">--:--</div>
 <div id="progress-bar-container"><div id="progress-bar"></div></div>
 <div id="overrun"></div>
-<h2 id="section-title">Church Schedule Timer</h2>
+<h2 id="section-title">Loading...</h2>
 <div id="remaining-time">Remaining Schedule Time: --:--</div>
-
-<div class="bottom-container">
-  <div class="controls">
-    <button onclick="startTimer()">Start</button>
-    <button onclick="pauseTimer()">Pause</button>
-    <button onclick="resetTimer()">Reset</button>
-    <button onclick="previousSection()">Back</button>
-    <button onclick="nextSection()">Next</button>
-  </div>
-  <button class="menu-toggle" onclick="toggleMenu()">Toggle Schedule Menu</button>
-  <div id="menu-section">
-    <div class="controls" style="flex-wrap: nowrap; justify-content: flex-start;">
-      <input type="text" id="section-name" placeholder="Section name" />
-      <input type="number" id="minutes" placeholder="Min" min="0" style="width: 60px; margin-left: 0.5rem" />
-      <input type="number" id="seconds" placeholder="Sec" min="0" max="59" style="width: 60px; margin-left: 0.5rem" />
-      <button onclick="addSection()" style="margin-left: 0.5rem">Add</button>
-    </div>
-    <div id="section-list" ondragover="event.preventDefault()" ondrop="dropSection(event)"></div>
-  </div>
-</div>
+<div id="predicted-end">Predicted End: --:--</div>
 
 <script>
 const firebaseConfig = {
@@ -71,150 +93,96 @@ const firebaseConfig = {
   appId: "1:381529267609:web:3b6565b1b60c2c72acc708",
   measurementId: "G-SX7DKY8WPQ"
 };
+
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-let sections=[], currentSection=0, timeLeft=0, isRunning=false, dragStartIndex=null, overrunTime=0;
+const timerEl = document.getElementById("timer");
+const overrunEl = document.getElementById("overrun");
+const sectionTitleEl = document.getElementById("section-title");
+const progressBar = document.getElementById("progress-bar");
+const remainingTimeEl = document.getElementById("remaining-time");
+const predictedEndEl = document.getElementById("predicted-end");
 
-// Formatters
-function format(seconds){ const m=Math.floor(Math.abs(seconds)/60); const s=Math.abs(seconds)%60; return `${m}:${s.toString().padStart(2,'0')}`; }
-function formatHMS(seconds){ const absSec=Math.abs(seconds); const h=Math.floor(absSec/3600); const m=Math.floor((absSec%3600)/60); const s=absSec%60; return h>0?`${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`:`${m}:${s.toString().padStart(2,'0')}`; }
+let sections = [];
+let currentSection = 0;
+let timeLeft = 0;
+let overrunTime = 0;
+let isRunning = false;
+let lastUpdated = Date.now();
+let currentSectionDuration = 1;
 
-// Display updates
-function updateDisplay(){
-  const timerEl=document.getElementById("timer");
-  const overrunEl=document.getElementById("overrun");
+function formatHMS(seconds) {
+  const absSec = Math.abs(seconds);
+  const h = Math.floor(absSec / 3600);
+  const m = Math.floor((absSec % 3600) / 60);
+  const s = absSec % 60;
+  if (h > 0) return `${h}:${m.toString().padStart(2,"0")}:${s.toString().padStart(2,"0")}`;
+  return `${m}:${s.toString().padStart(2,"0")}`;
+}
 
-  if(timeLeft>=0){
-    timerEl.textContent=format(timeLeft);
+function calculateRemaining(displayTime) {
+  let rem = Math.max(displayTime,0) + overrunTime;
+  for(let i=currentSection+1;i<sections.length;i++) rem += sections[i].duration;
+  return rem;
+}
+
+function renderUI(displayTime){
+  const section = sections[currentSection] || {name:"No Active Section", duration:1};
+  sectionTitleEl.textContent = section.name;
+  currentSectionDuration = section.duration;
+
+  // Timer display
+  if(displayTime >= 0){
+    timerEl.textContent = formatHMS(displayTime);
     timerEl.style.color="#22c55e";
-    overrunEl.textContent=overrunTime>0?`Overrun: ${format(overrunTime)}`:'';
+    overrunEl.textContent=overrunTime>0?`Overrun: ${formatHMS(overrunTime)}`:'';
   } else {
     timerEl.textContent="00:00";
     timerEl.style.color="#ef4444";
-    overrunEl.textContent=`Overrun: ${format(Math.abs(timeLeft))}`;
+    overrunEl.textContent="Overrun: "+formatHMS(displayTime);
   }
 
-  updateProgressBar();
-  updateRemainingTime();
-}
+  // Progress bar: full width at start, shrinks as time passes
+  let percent = displayTime >= 0 ? (displayTime/section.duration)*100 : 0;
+  percent = Math.min(100, Math.max(0, percent));
+  progressBar.style.width = percent+"%";
 
-function updateProgressBar(){
-  const total=sections[currentSection]?.duration||1;
-  const remaining=Math.max(timeLeft,0);
-  const percent=(remaining/total)*100;
-  const progressBar=document.getElementById("progress-bar");
-
-  if(percent>50) progressBar.style.backgroundColor="#22c55e";
-  else if(percent>20) progressBar.style.backgroundColor="#f97316";
+  // Color gradient: green->orange->red based on remaining %
+  if(percent > 50) progressBar.style.backgroundColor="#22c55e";
+  else if(percent > 20) progressBar.style.backgroundColor="#f97316";
   else progressBar.style.backgroundColor="#ef4444";
 
-  progressBar.style.width=percent+"%";
+  remainingTimeEl.textContent="Remaining Schedule Time: "+formatHMS(calculateRemaining(displayTime));
+
+  const predicted = new Date(Date.now() + calculateRemaining(displayTime)*1000);
+  predictedEndEl.textContent="Predicted End: "+predicted.getHours().toString().padStart(2,'0')+":"+predicted.getMinutes().toString().padStart(2,'0');
 }
 
-function updateTitle(){ document.getElementById("section-title").textContent = sections[currentSection]?.name || "Church Schedule Timer"; }
+// Firebase real-time listener
+database.ref('timerState').on('value', snapshot => {
+  const data = snapshot.val();
+  if(!data || data.secretKey!=='PickAllPokemons98') return;
 
-function updateRemainingTime(){
-  const remainingTimeEl=document.getElementById("remaining-time");
-  let remainingSeconds=Math.max(timeLeft,0)+overrunTime;
-  for(let i=currentSection+1;i<sections.length;i++) remainingSeconds+=sections[i].duration;
-  remainingTimeEl.textContent="Remaining Schedule Time: "+formatHMS(remainingSeconds);
-}
+  sections = data.sections || [];
+  currentSection = data.currentSection ?? 0;
+  timeLeft = data.timeLeft ?? 0;
+  overrunTime = data.overrunTime ?? 0;
+  isRunning = data.isRunning ?? false;
+  lastUpdated = Date.now();
+});
 
-// Firebase save
-function saveState(){
-  database.ref('timerState').set({
-    secretKey:'PickAllPokemons98',
-    sections,
-    currentSection,
-    timeLeft,
-    isRunning,
-    overrunTime,
-    lastUpdated: Date.now()
-  });
-}
-
-// Timer controls
-function startTimer(){ if(!sections[currentSection]||isRunning) return; isRunning=true; saveState(); }
-function pauseTimer(){ if(!isRunning) return; isRunning=false; saveState(); }
-function resetTimer(){ timeLeft=sections[currentSection]?.duration||0; overrunTime=0; isRunning=false; saveState(); }
-
-function nextSection(){ 
-  if(currentSection<sections.length-1){ 
-    if(timeLeft<0) overrunTime=Math.abs(timeLeft); else overrunTime=0;
-    currentSection++; 
-    timeLeft=sections[currentSection]?.duration||0; 
-    overrunTime=0; 
-    isRunning=true; 
-    saveState(); 
-  } 
-}
-function previousSection(){ 
-  if(currentSection>0){ 
-    if(timeLeft<0) overrunTime=Math.abs(timeLeft); else overrunTime=0;
-    currentSection--; 
-    timeLeft=sections[currentSection]?.duration||0; 
-    overrunTime=0; 
-    isRunning=true; 
-    saveState(); 
-  } 
-}
-
-function addSection(){
-  const name=document.getElementById("section-name").value.trim();
-  const minutes=parseInt(document.getElementById("minutes").value)||0;
-  const seconds=parseInt(document.getElementById("seconds").value)||0;
-  const duration=minutes*60+seconds;
-  if(!name||duration<=0) return;
-  sections.push({name,duration});
-  document.getElementById("section-name").value="";
-  document.getElementById("minutes").value="";
-  document.getElementById("seconds").value="";
-  saveState();
-}
-function removeSection(index){ if(isRunning) return alert("Pause timer before removing sections."); if(index<0||index>=sections.length) return; sections.splice(index,1); if(currentSection>=sections.length) currentSection=sections.length-1; timeLeft=sections[currentSection]?.duration||0; saveState(); }
-
-// Drag & drop
-function dragStart(e){ dragStartIndex=+e.target.getAttribute("data-index"); }
-function dropSection(e){ const dropTarget=e.target.closest(".section-item"); if(!dropTarget) return; const dropIndex=+dropTarget.getAttribute("data-index"); const item=sections.splice(dragStartIndex,1)[0]; sections.splice(dropIndex,0,item); if(currentSection===dragStartIndex) currentSection=dropIndex; else if(currentSection>dragStartIndex&&currentSection<=dropIndex) currentSection--; else if(currentSection<dragStartIndex&&currentSection>=dropIndex) currentSection++; saveState(); }
-function renderSections(){ const list=document.getElementById("section-list"); list.innerHTML=""; sections.forEach((s,i)=>{ const div=document.createElement("div"); div.className="section-item"; div.setAttribute("draggable",true); div.setAttribute("data-index",i); div.ondragstart=dragStart; if(i===currentSection) div.classList.add("active"); div.innerHTML=`<span>${s.name} (${format(s.duration)})</span><button class="remove-btn" onclick="removeSection(${i})">X</button>`; list.appendChild(div); }); updateTitle(); }
-function toggleMenu(){ const menu=document.getElementById("menu-section"); menu.style.display=menu.style.display==="block"?"none":"block"; }
-
-// Firebase listener for real-time sync
-function listenFirebase(){
-  database.ref('timerState').on('value',(snapshot)=>{
-    const data=snapshot.val();
-    if(!data||data.secretKey!=='PickAllPokemons98') return;
-    sections=data.sections||[];
-    currentSection=data.currentSection??0;
-
-    if(data.lastUpdated){
-      const elapsed=Math.floor((Date.now() - data.lastUpdated)/1000);
-      timeLeft=(data.timeLeft??(sections[currentSection]?.duration||0)) - (data.isRunning?elapsed:0);
-      overrunTime = data.overrunTime || 0;
-    } else {
-      timeLeft=data.timeLeft??(sections[currentSection]?.duration||0);
-      overrunTime = data.overrunTime || 0;
-    }
-
-    isRunning=data.isRunning||false;
-    renderSections();
-    updateDisplay();
-  });
-}
-
-// Timer loop
+// Timer update loop
 setInterval(()=>{
+  let displayTime = timeLeft;
   if(isRunning){
-    timeLeft--;
-    if(timeLeft<0) overrunTime=Math.abs(timeLeft);
-    saveState();
+    const elapsed = Math.floor((Date.now() - lastUpdated)/1000);
+    displayTime = timeLeft - elapsed;
+    if(displayTime < 0) overrunTime = Math.abs(displayTime);
   }
-  updateDisplay();
-},1000);
+  renderUI(displayTime);
+}, 250);
 
-window.onload=()=>{ listenFirebase(); updateDisplay(); };
 </script>
-
 </body>
 </html>
