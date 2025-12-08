@@ -1,45 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Church Clock Viewer</title>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background-color: #000;
+  color: #fff;
+  font-family: sans-serif;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+#timer {
+  font-size: 10rem;
+  font-weight: 900;
+  margin-bottom: 1rem;
+  user-select: none;
+}
+
+#section-title {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.9;
+  user-select: none;
+}
+
+#progress-bar-container {
+  width: 80%;
+  height: 40px;
+  background: #333;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 1rem;
+}
+
+#progress-bar {
+  height: 100%;
+  width: 100%;
+  background-color: #22c55e;
+  transition: width 0.5s linear, background-color 0.3s linear;
+}
+
+#overrun {
+  margin-top: 1rem;
+  font-size: 2rem;
+  color: #ef4444;
+  min-height: 2rem;
+  user-select: none;
+}
+</style>
+</head>
+
+<body>
+<div id="timer">--:--</div>
+<div id="section-title">Loading...</div>
+<div id="progress-bar-container"><div id="progress-bar"></div></div>
+<div id="overrun"></div>
+
 <script>
+const firebaseConfig = {
+  apiKey: "AIzaSyD056thmGLxTwVOU01Qy_KNIqS4aqdW8Bw",
+  authDomain: "clockapp-26b10.firebaseapp.com",
+  projectId: "clockapp-26b10",
+  storageBucket: "clockapp-26b10.firebasestorage.app",
+  messagingSenderId: "381529267609",
+  appId: "1:381529267609:web:3b6565b1b60c2c72acc708",
+  measurementId: "G-SX7DKY8WPQ"
+};
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+let sections = [];
+let currentSection = 0;
+let baseTimeLeft = 0;
+let isRunning = false;
+let lastUpdated = Date.now();
+
+// Format
+function format(seconds) {
+  const m = Math.floor(Math.abs(seconds) / 60);
+  const s = Math.floor(Math.abs(seconds) % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function updateProgressBar(timeLeft) {
+  const total = sections[currentSection]?.duration || 1;
+  const remaining = Math.max(timeLeft, 0);
+  const percent = (remaining / total) * 100;
+
   const bar = document.getElementById("progress-bar");
-  const timeDisplay = document.getElementById("time-display");
 
-  let totalDuration = 0;
-  let endTime = 0;
+  if (percent > 50) bar.style.backgroundColor = "#22c55e";
+  else if (percent > 20) bar.style.backgroundColor = "#f97316";
+  else bar.style.backgroundColor = "#ef4444";
 
-  function loadFromFirebase() {
-    firebase.database().ref("timer").on("value", (snapshot) => {
-      const data = snapshot.val();
-      if (!data) return;
+  bar.style.width = percent + "%";
+}
 
-      totalDuration = data.totalDuration;
-      endTime = data.endTime;
-    });
+function updateDisplay() {
+  const now = Date.now();
+  const elapsed = isRunning ? (now - lastUpdated) / 1000 : 0;
+  const timeLeft = baseTimeLeft - elapsed;
+
+  const timerEl = document.getElementById("timer");
+  const overrunEl = document.getElementById("overrun");
+
+  if (timeLeft >= 0) {
+    timerEl.textContent = format(timeLeft);
+    timerEl.style.color = "#22c55e";
+    overrunEl.textContent = "";
+  } else {
+    timerEl.textContent = "00:00";
+    timerEl.style.color = "#ef4444";
+    overrunEl.textContent = "Overrun: " + format(Math.abs(timeLeft));
   }
 
-  function formatTime(ms) {
-    const totalSec = Math.max(0, Math.floor(ms / 1000));
-    const h = Math.floor(totalSec / 3600);
-    const m = Math.floor((totalSec % 3600) / 60);
-    const s = totalSec % 60;
+  updateProgressBar(timeLeft);
+  requestAnimationFrame(updateDisplay);
+}
 
-    if (h > 0) return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-    return `${m}:${s.toString().padStart(2, "0")}`;
-  }
+// Firebase listener
+database.ref("timerState").on("value", (snapshot) => {
+  const data = snapshot.val();
+  if (!data || data.secretKey !== "PickAllPokemons98") return;
 
-  function updateViewer() {
-    const now = Date.now();
-    const remaining = endTime - now;
+  sections = data.sections || [];
+  currentSection = data.currentSection || 0;
+  baseTimeLeft = data.timeLeft || (sections[currentSection]?.duration || 0);
+  isRunning = data.isRunning || false;
+  lastUpdated = data.lastUpdated || Date.now();
 
-    // Smooth bar percentage (updates every 50ms)
-    const percent = Math.max(0, Math.min(1, remaining / totalDuration));
-    bar.style.width = `${percent * 100}%`;
+  document.getElementById("section-title").textContent =
+    sections[currentSection]?.name || "Section";
+});
 
-    // Only update the text every second (no brrr)
-    if (!updateViewer.lastTextUpdate || now - updateViewer.lastTextUpdate >= 1000) {
-      timeDisplay.textContent = formatTime(remaining);
-      updateViewer.lastTextUpdate = now;
-    }
-  }
-
-  loadFromFirebase();
-  setInterval(updateViewer, 50); // SMOOTH as butter
+// Start smooth loop
+requestAnimationFrame(updateDisplay);
 </script>
+</body>
+</html>
