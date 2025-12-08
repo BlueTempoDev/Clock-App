@@ -60,7 +60,7 @@ html, body {
   margin: 0 0 0.5rem 0;
   user-select: none;
 }
-#remaining-time, #predicted-end {
+#remaining-time {
   font-size: 5vw;
   opacity: 0.8;
   margin: 0.2rem 0;
@@ -70,7 +70,7 @@ html, body {
   #timer { font-size: 140px !important; }
   #overrun { font-size: 36px !important; }
   #section-title { font-size: 48px !important; }
-  #remaining-time, #predicted-end { font-size: 24px !important; }
+  #remaining-time { font-size: 24px !important; }
 }
 </style>
 </head>
@@ -81,7 +81,6 @@ html, body {
 <div id="overrun"></div>
 <h2 id="section-title">Loading...</h2>
 <div id="remaining-time">Remaining Schedule Time: --:--</div>
-<div id="predicted-end">Predicted End: --:--</div>
 
 <script>
 const firebaseConfig = {
@@ -102,7 +101,6 @@ const overrunEl = document.getElementById("overrun");
 const sectionTitleEl = document.getElementById("section-title");
 const progressBar = document.getElementById("progress-bar");
 const remainingTimeEl = document.getElementById("remaining-time");
-const predictedEndEl = document.getElementById("predicted-end");
 
 let sections = [];
 let currentSection = 0;
@@ -136,7 +134,7 @@ function renderUI(displayTime){
   if(displayTime >= 0){
     timerEl.textContent = formatHMS(displayTime);
     timerEl.style.color="#22c55e";
-    overrunEl.textContent=overrunTime>0?`Overrun: ${formatHMS(overrunTime)}`:'';
+    overrunEl.textContent = overrunTime>0 ? `Overrun: ${formatHMS(overrunTime)}` : '';
   } else {
     timerEl.textContent="00:00";
     timerEl.style.color="#ef4444";
@@ -153,10 +151,8 @@ function renderUI(displayTime){
   else if(percent > 20) progressBar.style.backgroundColor="#f97316";
   else progressBar.style.backgroundColor="#ef4444";
 
-  remainingTimeEl.textContent="Remaining Schedule Time: "+formatHMS(calculateRemaining(displayTime));
-
-  const predicted = new Date(Date.now() + calculateRemaining(displayTime)*1000);
-  predictedEndEl.textContent="Predicted End: "+predicted.getHours().toString().padStart(2,'0')+":"+predicted.getMinutes().toString().padStart(2,'0');
+  // Remaining schedule time
+  remainingTimeEl.textContent = "Remaining Schedule Time: "+formatHMS(calculateRemaining(displayTime));
 }
 
 // Firebase real-time listener
@@ -182,7 +178,6 @@ setInterval(()=>{
   }
   renderUI(displayTime);
 }, 250);
-
 </script>
 </body>
 </html>
