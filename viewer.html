@@ -2,105 +2,136 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Timer Viewer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Church Clock Viewer</title>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <style>
-    body {
-        margin: 0;
-        padding: 0;
-        background: #111;
-        font-family: Arial, sans-serif;
-        color: #fff;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-
-    /* Title */
-    h1 {
-        margin-top: 20px;
-        font-size: 28px;
-        font-weight: bold;
-    }
-
-    /* Outer bar container (STATIC SIZE) */
-    .bar-container {
-        width: 80%;      /* Always same size */
-        max-width: 900px;
-        height: 25px;
-        background: #333;
-        border-radius: 12px;
-        margin-top: 30px;
-        overflow: hidden;
-    }
-
-    /* Progress bar (smooth transition) */
-    .bar-fill {
-        height: 100%;
-        background: #4caf50;
-        width: 0%;
-        transition: width 0.25s linear;
-    }
-
-    .time-text {
-        margin-top: 12px;
-        font-size: 20px;
-        font-weight: 600;
-    }
+html, body { margin: 0; padding: 0; height: 100%; background-color: #000; color: #fff; font-family: sans-serif; overflow-x: hidden; }
+body { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; text-align: center; }
+#timer { font-size: 12rem; font-weight: 900; margin: 0; user-select: none; line-height: 1; }
+#progress-bar-container { width: 80%; height: 50px; background: #333; border-radius: 10px; overflow: hidden; margin: 1rem auto; position: relative; }
+#progress-bar { height: 100%; width: 100%; background-color: #22c55e; transition: width 0.1s linear, background-color 0.5s linear; }
+#overrun, #remaining-time { font-size: 2.5rem; opacity: 0.9; margin: 0.25rem 0; user-select: none; }
+#overrun { color: #ef4444; min-height: 3rem; }
+#section-title { font-size: 3rem; opacity: 0.9; margin: 0.5rem 0; user-select: none; }
 </style>
 </head>
-
 <body>
 
-<h1>Event Timer</h1>
+<div id="timer">--:--</div>
+<div id="progress-bar-container"><div id="progress-bar"></div></div>
+<div id="overrun"></div>
+<h2 id="section-title">Church Schedule Timer</h2>
+<div id="remaining-time">Remaining Schedule Time: --:--</div>
 
-<div class="bar-container">
-    <div class="bar-fill" id="barFill"></div>
-</div>
-
-<div class="time-text" id="timeText">--:-- / --:--</div>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
-import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-database.js";
-
+<script>
 const firebaseConfig = {
-    apiKey: "YOUR_KEY",
-    authDomain: "YOUR_DOMAIN",
-    databaseURL: "YOUR_DB_URL",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_BUCKET",
-    messagingSenderId: "YOUR_ID",
-    appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyD056thmGLxTwVOU01Qy_KNIqS4aqdW8Bw",
+  authDomain: "clockapp-26b10.firebaseapp.com",
+  projectId: "clockapp-26b10",
+  storageBucket: "clockapp-26b10.firebasestorage.app",
+  messagingSenderId: "381529267609",
+  appId: "1:381529267609:web:3b6565b1b60c2c72acc708",
+  measurementId: "G-SX7DKY8WPQ"
 };
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+let sections=[], currentSection=0, timeLeft=0, isRunning=false, overrunTime=0;
+let lastUpdate = Date.now();
 
-const bar = document.getElementById("barFill");
-const text = document.getElementById("timeText");
+// Formatters
+function format(seconds){ const m=Math.floor(Math.abs(seconds)/60); const s=Math.abs(seconds)%60; return `${m}:${s.toString().padStart(2,'0')}`; }
+function formatHMS(seconds){ const absSec=Math.abs(seconds); const h=Math.floor(absSec/3600); const m=Math.floor((absSec%3600)/60); const s=absSec%60; return h>0?`${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`:`${m}:${s.toString().padStart(2,'0')}`; }
 
-onValue(ref(db, "timer"), (snapshot) => {
-    const data = snapshot.val();
-    if (!data || !data.totalTime || !data.remainingTime) return;
+// Display updates
+function updateDisplay(){
+    const timerEl=document.getElementById("timer");
+    const overrunEl=document.getElementById("overrun");
 
-    const total = data.totalTime;
-    const remaining = data.remainingTime;
+    if(timeLeft>=0){
+        timerEl.textContent=format(timeLeft);
+        timerEl.style.color="#22c55e";
+        overrunEl.textContent=overrunTime>0?`Overrun: ${format(overrunTime)}`:'';
+    } else {
+        timerEl.textContent="00:00";
+        timerEl.style.color="#ef4444";
+        overrunEl.textContent=`Overrun: ${format(Math.abs(timeLeft))}`;
+    }
 
-    // Percent
-    const progress = ((total - remaining) / total) * 100;
-    bar.style.width = progress + "%";
+    updateProgressBar();
+    updateRemainingTime();
+}
 
-    // Convert seconds → mm:ss
-    const fmt = (sec) => {
-        const m = Math.floor(sec / 60);
-        const s = sec % 60;
-        return `${m}:${s.toString().padStart(2, "0")}`;
-    };
+function updateProgressBar(){
+    const total=sections[currentSection]?.duration||1;
+    const remaining=Math.max(timeLeft,0);
+    const percent=(remaining/total)*100;
+    const progressBar=document.getElementById("progress-bar");
 
-    text.textContent = `${fmt(total - remaining)} / ${fmt(total)}`;
-});
+    if(percent>50) progressBar.style.backgroundColor="#22c55e";
+    else if(percent>20) progressBar.style.backgroundColor="#f97316";
+    else progressBar.style.backgroundColor="#ef4444";
+
+    progressBar.style.width=percent+"%";
+}
+
+function updateTitle(){ document.getElementById("section-title").textContent = sections[currentSection]?.name || "Church Schedule Timer"; }
+
+function updateRemainingTime(){
+    const remainingTimeEl=document.getElementById("remaining-time");
+    let remainingSeconds=Math.max(timeLeft,0)+overrunTime;
+    for(let i=currentSection+1;i<sections.length;i++) remainingSeconds+=sections[i].duration;
+    remainingTimeEl.textContent="Remaining Schedule Time: "+formatHMS(remainingSeconds);
+}
+
+// Firebase listener
+function listenFirebase(){
+    database.ref('timerState').on('value',(snapshot)=>{
+        const data=snapshot.val();
+        if(!data || data.secretKey !== 'PickAllPokemons98') return;
+        sections = data.sections || [];
+        currentSection = data.currentSection ?? 0;
+
+        if(data.lastUpdated){
+            const elapsed=(Date.now() - data.lastUpdated)/1000;
+            timeLeft=(data.timeLeft ?? (sections[currentSection]?.duration || 0)) - (data.isRunning ? elapsed : 0);
+            overrunTime = data.overrunTime || 0;
+        } else {
+            timeLeft = data.timeLeft ?? (sections[currentSection]?.duration || 0);
+            overrunTime = data.overrunTime || 0;
+        }
+
+        isRunning = data.isRunning || false;
+        updateDisplay();
+        updateTitle();
+    });
+}
+
+// Smooth timer loop
+function smoothUpdate(){
+    const now = Date.now();
+    const delta = (now - lastUpdate)/1000;
+    lastUpdate = now;
+
+    if(isRunning && sections[currentSection]){
+        timeLeft -= delta;
+        overrunTime = timeLeft < 0 ? Math.abs(timeLeft) : 0;
+        updateDisplay();
+    }
+
+    requestAnimationFrame(smoothUpdate);
+}
+
+window.onload = ()=>{
+    listenFirebase();
+    lastUpdate = Date.now();
+    smoothUpdate();
+};
 </script>
 
 </body>
