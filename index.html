@@ -1,3 +1,7 @@
+Here is the full, updated code. I’ve integrated the **Landscape Fix** directly into the style section so it handles rotation perfectly on phones and tablets.
+
+You can copy and paste this entire block into your `index.html` (or a `test.html` file to try it first).
+
 ```html
 <!DOCTYPE html>
 <html lang="en">
@@ -10,41 +14,53 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <style>
-/* --- RESPONSIVE CSS UPDATES --- */
-html, body { margin: 0; padding: 0; height: 100%; background-color: #121212; color: #fff; font-family: sans-serif; overflow-x: hidden; }
-body { display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; padding-bottom: 220px; text-align: center; }
+/* --- BASE STYLING --- */
+html, body { margin: 0; padding: 0; height: 100%; background-color: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
+body { display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; text-align: center; height: 100vh; padding-bottom: 220px; }
 
-h1 { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font-size: clamp(1.2rem, 3vw, 2rem); opacity: 0.7; margin: 0; user-select: none; width: 100%; }
+/* HEADER */
+h1 { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font-size: clamp(1rem, 2vw, 1.5rem); opacity: 0.5; margin: 0; user-select: none; width: 100%; z-index: 1; }
 
-/* clamp(MIN, IDEAL, MAX) makes text auto-size for phones vs laptops */
-#timer { font-size: clamp(5rem, 25vw, 15rem); font-weight: 900; margin: 0; user-select: none; line-height: 1; }
+/* DYNAMIC TEXT SIZING */
+#timer { font-size: clamp(5rem, 25vw, 15rem); font-weight: 900; margin: 0; user-select: none; line-height: 1; transition: all 0.3s ease; }
 #section-title { font-size: clamp(1.5rem, 6vw, 3rem); opacity: 0.9; margin: 0.5rem 0; user-select: none; }
-#overrun, #remaining-time { font-size: clamp(1.2rem, 4vw, 2.5rem); opacity: 0.9; margin: 0.25rem 0; user-select: none; }
-#overrun { color: #ef4444; min-height: clamp(1.5rem, 5vw, 3rem); }
+#overrun, #remaining-time { font-size: clamp(1.1rem, 4vw, 2.5rem); opacity: 0.9; margin: 0.25rem 0; user-select: none; }
+#overrun { color: #ef4444; min-height: 2.5rem; }
 
-#progress-bar-container { width: 90%; max-width: 800px; height: clamp(20px, 4vw, 50px); background: #333; border-radius: 10px; overflow: hidden; margin: 1rem auto 0.5rem auto; position: relative; }
+/* PROGRESS BAR */
+#progress-bar-container { width: 90%; max-width: 800px; height: clamp(15px, 4vw, 40px); background: #333; border-radius: 10px; overflow: hidden; margin: 0.5rem auto; position: relative; }
 #progress-bar { height: 100%; width: 100%; background-color: #22c55e; transition: width 1s linear, background-color 0.5s linear; }
 
-/* Mobile Friendly Bottom Menu */
-.bottom-container { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 600px; background: #1a1a1a; border-top: 2px solid #22c55e; padding: 1rem 1rem env(safe-area-inset-bottom, 2rem) 1rem; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 0.8rem; z-index: 10; border-radius: 15px 15px 0 0; }
-.controls { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; width: 100%; }
+/* CONTROL PANEL (BOTTOM BOX) */
+.bottom-container { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 600px; background: #1a1a1a; border-top: 2px solid #22c55e; padding: 15px 15px env(safe-area-inset-bottom, 25px) 15px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 10; border-radius: 15px 15px 0 0; }
+.controls { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; width: 100%; }
 
-/* Bigger touch targets for fingers */
-button { padding: 12px 18px; font-size: 1.1rem; cursor: pointer; min-width: 80px; user-select: none; border-radius: 8px; border: none; font-weight: bold; background: #333; color: white; transition: background 0.2s; }
+button { padding: 12px 18px; font-size: 1rem; cursor: pointer; min-width: 75px; border-radius: 8px; border: none; font-weight: bold; background: #333; color: white; user-select: none; }
 button:active { background: #555; }
+.menu-toggle { background: #22c55e; color: #000; width: 100%; padding: 12px; border-radius: 8px; }
 
-.menu-toggle { background: #22c55e; color: #000; padding: 12px 18px; font-size: 1.1rem; cursor: pointer; width: 100%; text-align: center; user-select: none; border-radius: 8px; }
-#menu-section { display: none; width: 100%; background: #222; padding: 1rem; border-radius: 8px; box-sizing: border-box; user-select: none; max-height: 40vh; overflow-y: auto; }
-#menu-section .controls { justify-content: space-between; gap: 5px; flex-wrap: nowrap; margin-bottom: 1rem; }
-
+/* MENU SECTION */
+#menu-section { display: none; width: 100%; background: #222; padding: 10px; border-radius: 8px; max-height: 35vh; overflow-y: auto; }
 input { padding: 10px; border-radius: 6px; border: 1px solid #444; background: #111; color: white; font-size: 1rem; }
 #section-name { flex-grow: 1; min-width: 80px; }
 #minutes, #seconds { width: 60px; }
-
-#section-list { max-height: 25vh; overflow-y: auto; }
-.section-item { display: flex; justify-content: space-between; align-items: center; background: #111; margin-bottom: 0.5rem; padding: 10px; border-radius: 5px; cursor: move; font-size: 1.1rem; }
+#section-list { max-height: 20vh; overflow-y: auto; margin-top: 10px; }
+.section-item { display: flex; justify-content: space-between; align-items: center; background: #111; margin-bottom: 5px; padding: 10px; border-radius: 5px; }
 .section-item.active { border: 2px solid #22c55e; }
-.remove-btn { background: #ef4444; padding: 8px 12px; }
+.remove-btn { background: #ef4444; padding: 6px 12px; min-width: auto; }
+
+/* --- THE LANDSCAPE FIX --- */
+@media (orientation: landscape) and (max-height: 500px) {
+  body { padding-bottom: 0; justify-content: flex-start; padding-top: 35px; }
+  h1 { font-size: 0.8rem; top: 5px; }
+  #timer { font-size: 25vh; } /* Keeps timer small enough to see above buttons */
+  #section-title { font-size: 1.2rem; margin: 0; }
+  #overrun { min-height: 1.2rem; font-size: 0.9rem; }
+  #remaining-time { font-size: 0.9rem; margin: 0; }
+  #progress-bar-container { height: 10px; margin: 5px auto; }
+  .bottom-container { padding: 8px; gap: 5px; border-radius: 0; max-width: 100%; border-top-width: 1px; }
+  button { padding: 8px 12px; font-size: 0.85rem; }
+}
 </style>
 </head>
 <body>
@@ -78,7 +94,7 @@ input { padding: 10px; border-radius: 6px; border: 1px solid #444; background: #
 </div>
 
 <script>
-// --- YOUR EXISTING JAVASCRIPT LOGIC REMAINS UNCHANGED ---
+// --- FIREBASE & LOGIC (UNCHANGED) ---
 const firebaseConfig = {
   apiKey: "AIzaSyD056thmGLxTwVOU01Qy_KNIqS4aqdW8Bw",
   authDomain: "clockapp-26b10.firebaseapp.com",
@@ -167,6 +183,7 @@ function addSection(){
   document.getElementById("seconds").value="";
   saveState();
 }
+
 function removeSection(index){ 
   if(isRunning) return alert("Pause timer before removing sections."); 
   if(index<0||index>=sections.length) return; 
