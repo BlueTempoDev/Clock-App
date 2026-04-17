@@ -9,7 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <style>
-/* --- RESPONSIVE VIEWER STYLING --- */
+/* --- BASE VIEWER STYLING --- */
 html, body { 
   margin: 0; 
   padding: 0; 
@@ -30,7 +30,7 @@ body {
   padding: 20px; 
 }
 
-/* DYNAMIC TEXT SIZING & SMOOTH FADE */
+/* DYNAMIC TEXT SIZING */
 #timer, #remaining-time { 
   transition: opacity 0.4s ease; 
   opacity: 0; 
@@ -85,14 +85,41 @@ body {
   transition: width 0.1s linear, background-color 0.5s linear; 
 }
 
-/* --- LANDSCAPE OPTIMIZATION --- */
+/* --- THE LANDSCAPE FIX --- */
 @media (orientation: landscape) and (max-height: 500px) {
-  body { justify-content: center; padding: 10px; }
-  #timer { font-size: 42vh; } 
-  #section-title { font-size: 1.4rem; margin: 0; order: -1; }
-  #overrun { min-height: 1.2rem; font-size: 1rem; margin: 2px 0; }
-  #remaining-time { font-size: 1rem; margin: 0; }
-  #progress-bar-container { height: 12px; margin: 5px auto; border-radius: 5px; }
+  body { 
+    justify-content: center; 
+    padding: 5px; 
+  }
+  
+  #section-title { 
+    font-size: 1.2rem; 
+    margin: 0; 
+    order: -2; /* Title at the very top */
+  }
+
+  #timer { 
+    font-size: 38vh; /* Slightly smaller to leave room for bottom text */
+    margin: 0;
+  } 
+  
+  #progress-bar-container { 
+    height: 10px; 
+    margin: 4px auto; 
+    border-radius: 5px;
+  }
+
+  #overrun { 
+    min-height: 1.1rem; 
+    font-size: 0.9rem; 
+    margin: 0; 
+  }
+  
+  #remaining-time { 
+    font-size: 0.9rem; 
+    margin: 0; 
+    opacity: 0.7;
+  }
 }
 </style>
 </head>
