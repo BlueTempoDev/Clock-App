@@ -3,25 +3,87 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Church Clock Viewer</title>
+<title>Tempo Clock - Viewer</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <style>
 /* --- RESPONSIVE VIEWER STYLING --- */
-html, body { margin: 0; padding: 0; height: 100%; background-color: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
-body { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; text-align: center; box-sizing: border-box; padding: 20px; }
+html, body { 
+  margin: 0; 
+  padding: 0; 
+  height: 100%; 
+  background-color: #1a1a1a; /* Matching Charcoal Grey */
+  color: #fff; 
+  font-family: sans-serif; 
+  overflow: hidden; 
+}
+body { 
+  display: flex; 
+  flex-direction: column; 
+  justify-content: center; 
+  align-items: center; 
+  height: 100vh; 
+  text-align: center; 
+  box-sizing: border-box; 
+  padding: 20px; 
+}
 
-/* DYNAMIC TEXT SIZING */
-#timer { font-size: clamp(6rem, 35vw, 22rem); font-weight: 900; margin: 0; user-select: none; line-height: 0.9; transition: color 0.3s ease; }
-#section-title { font-size: clamp(1.8rem, 8vw, 4rem); opacity: 0.9; margin: 0.5rem 0; user-select: none; font-weight: bold; }
-#overrun, #remaining-time { font-size: clamp(1.2rem, 5vw, 3rem); opacity: 0.8; margin: 0.25rem 0; user-select: none; }
-#overrun { color: #ef4444; min-height: 3.5rem; font-weight: bold; }
+/* DYNAMIC TEXT SIZING & SMOOTH FADE */
+#timer, #remaining-time { 
+  transition: opacity 0.4s ease; 
+  opacity: 0; /* Starts hidden to stop flashing */
+}
+
+#timer { 
+  font-size: clamp(6rem, 35vw, 22rem); 
+  font-weight: 900; 
+  margin: 0; 
+  user-select: none; 
+  line-height: 0.9; 
+}
+
+#section-title { 
+  font-size: clamp(1.8rem, 8vw, 4rem); 
+  opacity: 0.9; 
+  margin: 0.5rem 0; 
+  user-select: none; 
+  font-weight: bold; 
+}
+
+#overrun, #remaining-time { 
+  font-size: clamp(1.2rem, 5vw, 3rem); 
+  opacity: 0.8; 
+  margin: 0.25rem 0; 
+  user-select: none; 
+}
+
+#overrun { 
+  color: #ef4444; 
+  min-height: 3.5rem; 
+  font-weight: bold; 
+}
 
 /* PROGRESS BAR */
-#progress-bar-container { width: 95%; max-width: 1200px; height: clamp(20px, 5vw, 60px); background: #222; border-radius: 15px; overflow: hidden; margin: 1.5rem auto; position: relative; border: 2px solid #333; }
-#progress-bar { height: 100%; width: 100%; background-color: #22c55e; transition: width 0.1s linear, background-color 0.5s linear; }
+#progress-bar-container { 
+  width: 95%; 
+  max-width: 1200px; 
+  height: clamp(20px, 5vw, 60px); 
+  background: #333; 
+  border-radius: 15px; 
+  overflow: hidden; 
+  margin: 1.5rem auto; 
+  position: relative; 
+  border: 2px solid #444; 
+}
+
+#progress-bar { 
+  height: 100%; 
+  width: 100%; 
+  background-color: #22c55e; 
+  transition: width 0.1s linear, background-color 0.5s linear; 
+}
 
 /* --- LANDSCAPE OPTIMIZATION --- */
 @media (orientation: landscape) and (max-height: 500px) {
@@ -36,14 +98,14 @@ body { display: flex; flex-direction: column; justify-content: center; align-ite
 </head>
 <body>
 
-<div id="timer">--:--</div>
+<div id="timer">00:00</div>
 <div id="progress-bar-container"><div id="progress-bar"></div></div>
 <div id="overrun"></div>
-<h2 id="section-title">Church Schedule Timer</h2>
-<div id="remaining-time">Remaining Schedule Time: --:--</div>
+<h2 id="section-title">Tempo Clock</h2>
+<div id="remaining-time">Remaining Schedule Time: 00:00</div>
 
 <script>
-// --- FIREBASE & LOGIC (UNCHANGED) ---
+// --- FIREBASE CONFIG ---
 const firebaseConfig = {
   apiKey: "AIzaSyD056thmGLxTwVOU01Qy_KNIqS4aqdW8Bw",
   authDomain: "clockapp-26b10.firebaseapp.com",
@@ -64,6 +126,7 @@ function format(seconds) {
   const s = Math.abs(seconds) % 60;
   return `${m}:${s.toString().padStart(2,'0')}`;
 }
+
 function formatHMS(seconds) {
   const absSec = Math.abs(seconds);
   const h = Math.floor(absSec / 3600);
@@ -74,8 +137,13 @@ function formatHMS(seconds) {
 
 function updateDisplay(){
   const timerEl = document.getElementById("timer");
+  const remainingEl = document.getElementById("remaining-time");
   const overrunEl = document.getElementById("overrun");
   const displayTime = Math.floor(timeLeft);
+
+  // Fade in once data is received
+  timerEl.style.opacity = "1";
+  remainingEl.style.opacity = "1";
 
   if(displayTime >= 0){
     timerEl.textContent = format(displayTime);
@@ -95,14 +163,16 @@ function updateProgressBar(){
   const remaining = Math.max(timeLeft,0);
   const percent = (remaining / total) * 100;
   const progressBar = document.getElementById("progress-bar");
+  
   if(percent > 50) progressBar.style.backgroundColor = "#22c55e";
   else if(percent > 20) progressBar.style.backgroundColor = "#f97316";
   else progressBar.style.backgroundColor = "#ef4444";
+  
   progressBar.style.width = percent + "%";
 }
 
 function updateTitle(){
-  document.getElementById("section-title").textContent = sections[currentSection]?.name || "Church Schedule Timer";
+  document.getElementById("section-title").textContent = sections[currentSection]?.name || "Tempo Clock";
 }
 
 function updateRemainingTime(){
