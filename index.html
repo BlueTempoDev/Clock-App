@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Church Clock App - Firebase Driven</title>
+<title>Tempo Clock - Controller</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -15,46 +15,31 @@ body { display: flex; flex-direction: column; justify-content: center; align-ite
 
 h1 { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font-size: clamp(1rem, 2vw, 1.5rem); opacity: 0.5; margin: 0; user-select: none; width: 100%; z-index: 1; }
 
-/* DYNAMIC TEXT SIZING */
-#timer { font-size: clamp(5rem, 25vw, 15rem); font-weight: 900; margin: 0; user-select: none; line-height: 1; transition: all 0.3s ease; }
+#timer { font-size: clamp(5rem, 25vw, 15rem); font-weight: 900; margin: 0; user-select: none; line-height: 1; transition: color 0.3s ease; }
 #section-title { font-size: clamp(1.5rem, 6vw, 3rem); opacity: 0.9; margin: 0.5rem 0; user-select: none; }
 #overrun, #remaining-time { font-size: clamp(1.1rem, 4vw, 2.5rem); opacity: 0.9; margin: 0.25rem 0; user-select: none; }
 #overrun { color: #ef4444; min-height: 2.5rem; }
 
-/* PROGRESS BAR */
 #progress-bar-container { width: 90%; max-width: 800px; height: clamp(15px, 4vw, 40px); background: #333; border-radius: 10px; overflow: hidden; margin: 0.5rem auto; position: relative; }
-#progress-bar { height: 100%; width: 100%; background-color: #22c55e; transition: width 0.1s linear, background-color 0.5s linear; }
+#progress-bar { height: 100%; width: 100%; background-color: #22c55e; transition: width 0.1s linear; }
 
-/* CONTROL PANEL */
 .bottom-container { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 600px; background: #1a1a1a; border-top: 2px solid #22c55e; padding: 15px 15px env(safe-area-inset-bottom, 20px) 15px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 10; border-radius: 15px 15px 0 0; }
 .controls { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; width: 100%; }
 
-button { padding: 12px 18px; font-size: 1rem; cursor: pointer; min-width: 75px; border-radius: 8px; border: none; font-weight: bold; background: #333; color: white; user-select: none; }
+button { padding: 12px 18px; font-size: 1rem; cursor: pointer; min-width: 75px; border-radius: 8px; border: none; font-weight: bold; background: #333; color: white; }
 .menu-toggle { background: #22c55e; color: #000; width: 100%; padding: 12px; border-radius: 8px; }
 
-/* MENU SECTION */
 #menu-section { display: none; width: 100%; background: #222; padding: 10px; border-radius: 8px; max-height: 35vh; overflow-y: auto; }
 input { padding: 10px; border-radius: 6px; border: 1px solid #444; background: #111; color: white; font-size: 1rem; }
-#section-name { flex-grow: 1; min-width: 80px; }
-#minutes, #seconds { width: 60px; }
-#section-list { max-height: 20vh; overflow-y: auto; margin-top: 10px; }
 .section-item { display: flex; justify-content: space-between; align-items: center; background: #111; margin-bottom: 5px; padding: 10px; border-radius: 5px; }
 .section-item.active { border: 2px solid #22c55e; }
-.remove-btn { background: #ef4444; padding: 6px 12px; min-width: auto; }
 
-/* --- LANDSCAPE FIX --- */
 @media (orientation: landscape) and (max-height: 500px) {
   body { padding-bottom: 0; justify-content: flex-start; padding-top: 25px; }
-  h1 { font-size: 0.7rem; top: 2px; }
   #timer { font-size: 35vh; margin-top: -10px; }  
   #progress-bar-container { display: none; }  
-  #section-title { font-size: 1rem; margin: 0; }
-  #overrun { min-height: 1rem; font-size: 0.8rem; margin: 0; }
-  #remaining-time { font-size: 0.8rem; margin: 0; }
-  .bottom-container { padding: 5px; gap: 5px; border-radius: 0; max-width: 100%; border-top-width: 1px; }
-  .controls { gap: 4px; }
+  .bottom-container { padding: 5px; gap: 5px; border-radius: 0; max-width: 100%; }
   button { padding: 6px 10px; font-size: 0.75rem; min-width: 60px; }
-  .menu-toggle { padding: 6px; font-size: 0.8rem; }
 }
 </style>
 </head>
@@ -70,26 +55,25 @@ input { padding: 10px; border-radius: 6px; border: 1px solid #444; background: #
 
 <div class="bottom-container">
   <div class="controls">
-    <button onclick="startTimer()">Start</button>
-    <button onclick="pauseTimer()">Pause</button>
-    <button onclick="resetTimer()">Reset</button>
-    <button onclick="previousSection()">Back</button>
-    <button onclick="nextSection()">Next</button>
+    <button onclick="handleAction(startTimer)">Start</button>
+    <button onclick="handleAction(pauseTimer)">Pause</button>
+    <button onclick="handleAction(resetTimer)">Reset</button>
+    <button onclick="handleAction(previousSection)">Back</button>
+    <button onclick="handleAction(nextSection)">Next</button>
   </div>
   <button class="menu-toggle" onclick="toggleMenu()">Toggle Schedule Menu</button>
   <div id="menu-section">
     <div class="controls">
       <input type="text" id="section-name" placeholder="Name" />
-      <input type="number" id="minutes" placeholder="Min" min="0" />
-      <input type="number" id="seconds" placeholder="Sec" min="0" max="59" />
+      <input type="number" id="minutes" placeholder="Min" />
+      <input type="number" id="seconds" placeholder="Sec" />
       <button onclick="addSection()">Add</button>
     </div>
-    <div id="section-list" ondragover="event.preventDefault()" ondrop="dropSection(event)"></div>
+    <div id="section-list"></div>
   </div>
 </div>
 
 <script>
-// --- LOGIC ---
 const firebaseConfig = {
   apiKey: "AIzaSyD056thmGLxTwVOU01Qy_KNIqS4aqdW8Bw",
   authDomain: "clockapp-26b10.firebaseapp.com",
@@ -102,8 +86,9 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-let sections=[], currentSection=0, timeLeft=0, isRunning=false, dragStartIndex=null, overrunTime=0;
+let sections=[], currentSection=0, timeLeft=0, isRunning=false, overrunTime=0;
 let lastUpdate = Date.now();
+let lastPushTime = 0; // To prevent feedback loops
 
 function format(seconds){ const m=Math.floor(Math.abs(seconds)/60); const s=Math.abs(seconds)%60; return `${m}:${s.toString().padStart(2,'0')}`; }
 function formatHMS(seconds){ const absSec=Math.abs(seconds); const h=Math.floor(absSec/3600); const m=Math.floor((absSec%3600)/60); const s=absSec%60; return h>0?`${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`:`${m}:${s.toString().padStart(2,'0')}`; }
@@ -123,128 +108,87 @@ function updateDisplay(){
   }
   updateProgressBar();
   updateRemainingTime();
+  updateTitle();
 }
 
 function updateProgressBar(){
   const total=sections[currentSection]?.duration||1;
-  const remaining=Math.max(timeLeft,0);
-  const percent=(remaining/total)*100;
-  const progressBar=document.getElementById("progress-bar");
-  if(percent>50) progressBar.style.backgroundColor="#22c55e";
-  else if(percent>20) progressBar.style.backgroundColor="#f97316";
-  else progressBar.style.backgroundColor="#ef4444";
-  progressBar.style.width=percent+"%";
+  const percent=(Math.max(timeLeft,0)/total)*100;
+  const pb=document.getElementById("progress-bar");
+  pb.style.width=percent+"%";
+  pb.style.backgroundColor = percent > 50 ? "#22c55e" : (percent > 20 ? "#f97316" : "#ef4444");
 }
 
 function updateTitle(){ document.getElementById("section-title").textContent = sections[currentSection]?.name || "Church Schedule Timer"; }
 
 function updateRemainingTime(){
-  const remainingTimeEl=document.getElementById("remaining-time");
-  let remainingSeconds=Math.max(timeLeft,0)+overrunTime;
-  for(let i=currentSection+1;i<sections.length;i++) remainingSeconds+=sections[i].duration;
-  remainingTimeEl.textContent="Remaining Schedule Time: "+formatHMS(Math.floor(remainingSeconds));
+  let rem=Math.max(timeLeft,0)+overrunTime;
+  for(let i=currentSection+1;i<sections.length;i++) rem+=sections[i].duration;
+  document.getElementById("remaining-time").textContent="Remaining Schedule Time: "+formatHMS(Math.floor(rem));
 }
 
 function saveState(){
+  lastPushTime = Date.now();
   database.ref('timerState').set({
     secretKey:'PickAllPokemons98', sections, currentSection, timeLeft, isRunning, overrunTime, lastUpdated: Date.now()
   });
 }
 
-function startTimer(){ if(!sections[currentSection]||isRunning) return; isRunning=true; saveState(); }
-function pauseTimer(){ if(!isRunning) return; isRunning=false; saveState(); }
-function resetTimer(){ timeLeft=sections[currentSection]?.duration||0; overrunTime=0; isRunning=false; saveState(); }
+function handleAction(fn) { fn(); saveState(); }
 
-function nextSection(){ 
-  if(currentSection<sections.length-1){ 
-    currentSection++; timeLeft=sections[currentSection]?.duration||0; overrunTime=0; isRunning=true; saveState(); 
-  } 
-}
-function previousSection(){ 
-  if(currentSection>0){ 
-    currentSection--; timeLeft=sections[currentSection]?.duration||0; overrunTime=0; isRunning=true; saveState(); 
-  } 
-}
+function startTimer(){ if(sections[currentSection]) isRunning=true; }
+function pauseTimer(){ isRunning=false; }
+function resetTimer(){ timeLeft=sections[currentSection]?.duration||0; overrunTime=0; isRunning=false; }
+function nextSection(){ if(currentSection<sections.length-1){ currentSection++; timeLeft=sections[currentSection].duration; overrunTime=0; }}
+function previousSection(){ if(currentSection>0){ currentSection--; timeLeft=sections[currentSection].duration; overrunTime=0; }}
 
 function addSection(){
   const name=document.getElementById("section-name").value.trim();
-  const minutes=parseInt(document.getElementById("minutes").value)||0;
-  const seconds=parseInt(document.getElementById("seconds").value)||0;
-  const duration=minutes*60+seconds;
-  if(!name||duration<=0) return;
-  sections.push({name,duration});
-  document.getElementById("section-name").value="";
-  document.getElementById("minutes").value="";
-  document.getElementById("seconds").value="";
-  saveState();
+  const dur=(parseInt(document.getElementById("minutes").value)||0)*60+(parseInt(document.getElementById("seconds").value)||0);
+  if(name && dur>0){ sections.push({name, duration: dur}); saveState(); }
 }
-
-function removeSection(index){ 
-  if(isRunning) return alert("Pause timer before removing sections."); 
-  if(index<0||index>=sections.length) return; 
-  sections.splice(index,1); 
-  if(currentSection>=sections.length) currentSection=sections.length-1; 
-  timeLeft=sections[currentSection]?.duration||0; saveState(); 
-}
-
-function dragStart(e){ dragStartIndex=+e.target.getAttribute("data-index"); }
-function dropSection(e){ 
-  const dropTarget=e.target.closest(".section-item"); 
-  if(!dropTarget) return; 
-  const dropIndex=+dropTarget.getAttribute("data-index"); 
-  const item=sections.splice(dragStartIndex,1)[0]; 
-  sections.splice(dropIndex,0,item); 
-  if(currentSection===dragStartIndex) currentSection=dropIndex; 
-  else if(currentSection>dragStartIndex&&currentSection<=dropIndex) currentSection--; 
-  else if(currentSection<dragStartIndex&&currentSection>=dropIndex) currentSection++; 
-  saveState(); 
-}
-
-function renderSections(){ 
-  const list=document.getElementById("section-list"); 
-  list.innerHTML=""; 
-  sections.forEach((s,i)=>{
-    const div=document.createElement("div"); 
-    div.className="section-item"; div.setAttribute("draggable",true); div.setAttribute("data-index",i); div.ondragstart=dragStart; 
-    if(i===currentSection) div.classList.add("active"); 
-    div.innerHTML=`<span>${s.name} (${format(s.duration)})</span><button class="remove-btn" onclick="removeSection(${i})">X</button>`;
-    div.ondblclick = ()=>{
-      currentSection=i; timeLeft=sections[currentSection]?.duration||0; overrunTime=0; isRunning=true; saveState(); renderSections(); updateDisplay();
-    };
-    list.appendChild(div); 
-  }); 
-  updateTitle(); 
-}
-
-function toggleMenu(){ const menu=document.getElementById("menu-section"); menu.style.display=menu.style.display==="block"?"none":"block"; }
 
 function listenFirebase(){
   database.ref('timerState').on('value',(snapshot)=>{
+    // IF WE JUST PUSHED, WAIT 2 SECONDS BEFORE TRUSTING INCOMING DATA
+    if(Date.now() - lastPushTime < 2000) return; 
+
     const data=snapshot.val();
-    if(!data||data.secretKey!=='PickAllPokemons98') return;
+    if(!data || data.secretKey!=='PickAllPokemons98') return;
     sections=data.sections||[]; currentSection=data.currentSection??0;
     const elapsed=data.lastUpdated ? (Date.now() - data.lastUpdated)/1000 : 0;
-    timeLeft=(data.timeLeft??(sections[currentSection]?.duration||0)) - (data.isRunning?elapsed:0);
-    overrunTime = data.overrunTime || 0;
-    isRunning=data.isRunning||false; renderSections(); updateDisplay();
+    timeLeft=(data.timeLeft??0) - (data.isRunning?elapsed:0);
+    overrunTime=data.overrunTime||0;
+    isRunning=data.isRunning||false;
+    renderSections(); updateDisplay();
   });
+}
+
+function renderSections(){
+  const list=document.getElementById("section-list");
+  list.innerHTML=sections.map((s,i)=>`
+    <div class="section-item ${i===currentSection?'active':''}">
+      <span>${s.name} (${format(s.duration)})</span>
+    </div>`).join('');
 }
 
 function smoothUpdate(){
   const now = Date.now();
   const delta = (now - lastUpdate)/1000;
   lastUpdate = now;
-  if(isRunning && sections[currentSection]){
+  if(isRunning){
     timeLeft -= delta;
     if(timeLeft < 0) overrunTime = Math.abs(timeLeft);
     updateDisplay();
-    // Only save occasionally to Firebase to prevent flashing/looping
+    // Only push to DB once per second to keep it light
     if(Math.floor(now/1000) !== Math.floor((now-delta*1000)/1000)) saveState();
   }
   requestAnimationFrame(smoothUpdate);
 }
 
-window.onload=()=>{ listenFirebase(); lastUpdate = Date.now(); smoothUpdate(); };
+function toggleMenu(){ const m=document.getElementById("menu-section"); m.style.display=m.style.display==="block"?"none":"block"; }
+
+window.onload=()=>{ listenFirebase(); lastUpdate=Date.now(); smoothUpdate(); };
 </script>
 </body>
 </html>
