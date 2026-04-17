@@ -15,7 +15,13 @@ body { display: flex; flex-direction: column; justify-content: center; align-ite
 
 h1 { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font-size: clamp(1rem, 2vw, 1.5rem); opacity: 0.5; margin: 0; user-select: none; width: 100%; z-index: 1; }
 
-#timer { font-size: clamp(5rem, 25vw, 15rem); font-weight: 900; margin: 0; user-select: none; line-height: 1; transition: color 0.3s ease; }
+/* THE FADE-IN FIX: Initial opacity 0 */
+#timer, #remaining-time { 
+  transition: opacity 0.4s ease; 
+  opacity: 0; 
+}
+
+#timer { font-size: clamp(5rem, 25vw, 15rem); font-weight: 900; margin: 0; user-select: none; line-height: 1; transition: color 0.3s ease, opacity 0.4s ease; }
 #section-title { font-size: clamp(1.5rem, 6vw, 3rem); opacity: 0.9; margin: 0.5rem 0; user-select: none; }
 #overrun, #remaining-time { font-size: clamp(1.1rem, 4vw, 2.5rem); opacity: 0.9; margin: 0.25rem 0; user-select: none; }
 #overrun { color: #ef4444; min-height: 2.5rem; }
@@ -39,7 +45,6 @@ input { padding: 10px; border-radius: 6px; border: 1px solid #444; background: #
   #timer { font-size: 35vh; margin-top: -10px; }  
   #progress-bar-container { display: none; }  
   .bottom-container { padding: 5px; gap: 5px; border-radius: 0; max-width: 100%; }
-  button { padding: 6px 10px; font-size: 0.75rem; min-width: 60px; }
 }
 </style>
 </head>
@@ -47,11 +52,11 @@ input { padding: 10px; border-radius: 6px; border: 1px solid #444; background: #
 
 <h1>Tempo Clock</h1>
 
-<div id="timer">--:--</div>
+<div id="timer">00:00</div>
 <div id="progress-bar-container"><div id="progress-bar"></div></div>
 <div id="overrun"></div>
-<h2 id="section-title">Church Schedule Timer</h2>
-<div id="remaining-time">Remaining Schedule Time: --:--</div>
+<h2 id="section-title">---</h2>
+<div id="remaining-time">Remaining Schedule Time: 00:00</div>
 
 <div class="bottom-container">
   <div class="controls">
@@ -88,15 +93,21 @@ const database = firebase.database();
 
 let sections=[], currentSection=0, timeLeft=0, isRunning=false, overrunTime=0;
 let lastUpdate = Date.now();
-let lastPushTime = 0; // To prevent feedback loops
+let lastPushTime = 0;
 
 function format(seconds){ const m=Math.floor(Math.abs(seconds)/60); const s=Math.abs(seconds)%60; return `${m}:${s.toString().padStart(2,'0')}`; }
 function formatHMS(seconds){ const absSec=Math.abs(seconds); const h=Math.floor(absSec/3600); const m=Math.floor((absSec%3600)/60); const s=absSec%60; return h>0?`${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`:`${m}:${s.toString().padStart(2,'0')}`; }
 
 function updateDisplay(){
   const timerEl=document.getElementById("timer");
+  const remainingEl=document.getElementById("remaining-time");
   const overrunEl=document.getElementById("overrun");
   const displayTime = Math.floor(timeLeft);
+  
+  // Set opacity to 1 as soon as we have data
+  timerEl.style.opacity = "1";
+  remainingEl.style.opacity = "1";
+
   if(displayTime>=0){
     timerEl.textContent=format(displayTime);
     timerEl.style.color="#22c55e";
@@ -134,7 +145,7 @@ function saveState(){
   });
 }
 
-function handleAction(fn) { fn(); saveState(); }
+function handleAction(fn) { fn(); updateDisplay(); saveState(); }
 
 function startTimer(){ if(sections[currentSection]) isRunning=true; }
 function pauseTimer(){ isRunning=false; }
@@ -150,17 +161,20 @@ function addSection(){
 
 function listenFirebase(){
   database.ref('timerState').on('value',(snapshot)=>{
-    // IF WE JUST PUSHED, WAIT 2 SECONDS BEFORE TRUSTING INCOMING DATA
-    if(Date.now() - lastPushTime < 2000) return; 
+    if(Date.now() - lastPushTime < 1500) return; 
 
     const data=snapshot.val();
     if(!data || data.secretKey!=='PickAllPokemons98') return;
-    sections=data.sections||[]; currentSection=data.currentSection??0;
+    
+    sections=data.sections||[]; 
+    currentSection=data.currentSection??0;
     const elapsed=data.lastUpdated ? (Date.now() - data.lastUpdated)/1000 : 0;
     timeLeft=(data.timeLeft??0) - (data.isRunning?elapsed:0);
     overrunTime=data.overrunTime||0;
     isRunning=data.isRunning||false;
-    renderSections(); updateDisplay();
+    
+    renderSections(); 
+    updateDisplay();
   });
 }
 
@@ -180,7 +194,6 @@ function smoothUpdate(){
     timeLeft -= delta;
     if(timeLeft < 0) overrunTime = Math.abs(timeLeft);
     updateDisplay();
-    // Only push to DB once per second to keep it light
     if(Math.floor(now/1000) !== Math.floor((now-delta*1000)/1000)) saveState();
   }
   requestAnimationFrame(smoothUpdate);
