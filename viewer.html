@@ -1,3 +1,8 @@
+I’ve updated the **Viewer** code to maintain that **Charcoal Grey** (`#1a1a1a`) background while ensuring the layout scales perfectly for horizontal phones and tablets. 
+
+In landscape mode, it will now intelligently tuck the progress bar down and keep the timer massive so it stays clear for the speaker.
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,7 +19,7 @@ html, body {
   margin: 0; 
   padding: 0; 
   height: 100%; 
-  background-color: #1a1a1a; /* Matching Charcoal Grey */
+  background-color: #1a1a1a; /* Charcoal Grey */
   color: #fff; 
   font-family: sans-serif; 
   overflow: hidden; 
@@ -33,7 +38,7 @@ body {
 /* DYNAMIC TEXT SIZING & SMOOTH FADE */
 #timer, #remaining-time { 
   transition: opacity 0.4s ease; 
-  opacity: 0; /* Starts hidden to stop flashing */
+  opacity: 0; 
 }
 
 #timer { 
@@ -87,21 +92,21 @@ body {
 
 /* --- LANDSCAPE OPTIMIZATION --- */
 @media (orientation: landscape) and (max-height: 500px) {
-  body { justify-content: space-around; padding: 10px; }
-  #timer { font-size: 45vh; } 
-  #section-title { font-size: 1.5rem; margin: 0; }
-  #overrun { min-height: 1.5rem; font-size: 1.1rem; margin: 0; }
-  #remaining-time { font-size: 1.1rem; margin: 0; }
-  #progress-bar-container { height: 15px; margin: 5px auto; }
+  body { justify-content: center; padding: 10px; }
+  #timer { font-size: 42vh; } 
+  #section-title { font-size: 1.4rem; margin: 0; order: -1; }
+  #overrun { min-height: 1.2rem; font-size: 1rem; margin: 2px 0; }
+  #remaining-time { font-size: 1rem; margin: 0; }
+  #progress-bar-container { height: 12px; margin: 5px auto; border-radius: 5px; }
 }
 </style>
 </head>
 <body>
 
+<h2 id="section-title">Tempo Clock</h2>
 <div id="timer">00:00</div>
 <div id="progress-bar-container"><div id="progress-bar"></div></div>
 <div id="overrun"></div>
-<h2 id="section-title">Tempo Clock</h2>
 <div id="remaining-time">Remaining Schedule Time: 00:00</div>
 
 <script>
@@ -141,7 +146,6 @@ function updateDisplay(){
   const overrunEl = document.getElementById("overrun");
   const displayTime = Math.floor(timeLeft);
 
-  // Fade in once data is received
   timerEl.style.opacity = "1";
   remainingEl.style.opacity = "1";
 
@@ -217,3 +221,4 @@ window.onload = () => {
 </script>
 </body>
 </html>
+```
