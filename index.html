@@ -10,7 +10,7 @@
 
 <style>
 /* --- BASE STYLING --- */
-html, body { margin: 0; padding: 0; height: 100%; background-color: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
+html, body { margin: 0; padding: 0; height: 100%; background-color: #1a1a1a; color: #fff; font-family: sans-serif; overflow: hidden; }
 body { display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; text-align: center; height: 100vh; padding-bottom: 220px; }
 
 h1 { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font-size: clamp(1rem, 2vw, 1.5rem); opacity: 0.5; margin: 0; user-select: none; width: 100%; z-index: 1; }
@@ -47,9 +47,8 @@ input { padding: 10px; border-radius: 6px; border: 1px solid #444; background: #
   body { padding-bottom: 0; justify-content: flex-start; padding-top: 25px; }
   h1 { font-size: 0.7rem; top: 2px; }
   
-  /* Shrink Timer and hide bar to save massive space */
-  #timer { font-size: 35vh; margin-top: -10px; } 
-  #progress-bar-container { display: none; } 
+  #timer { font-size: 35vh; margin-top: -10px; }  
+  #progress-bar-container { display: none; }  
   
   #section-title { font-size: 1rem; margin: 0; }
   #overrun { min-height: 1rem; font-size: 0.8rem; margin: 0; }
@@ -93,7 +92,7 @@ input { padding: 10px; border-radius: 6px; border: 1px solid #444; background: #
 </div>
 
 <script>
-// --- LOGIC REMAINS EXACTLY THE SAME ---
+// --- LOGIC ---
 const firebaseConfig = {
   apiKey: "AIzaSyD056thmGLxTwVOU01Qy_KNIqS4aqdW8Bw",
   authDomain: "clockapp-26b10.firebaseapp.com",
