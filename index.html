@@ -16,7 +16,6 @@ body { display: flex; flex-direction: column; justify-content: center; align-ite
 
 h1 { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font-size: clamp(1rem, 2vw, 1.5rem); opacity: 0.5; margin: 0; z-index: 1; }
 
-/* FADE-IN */
 #timer, #remaining-time { transition: opacity 0.4s ease; opacity: 0; }
 #timer { font-size: clamp(5rem, 25vw, 15rem); font-weight: 900; margin: 0; line-height: 1; transition: color 0.3s ease, opacity 0.4s ease; }
 #section-title { font-size: clamp(1.5rem, 6vw, 3rem); opacity: 0.9; margin: 0.5rem 0; }
@@ -26,18 +25,20 @@ h1 { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font
 #progress-bar-container { width: 90%; max-width: 800px; height: 30px; background: #333; border-radius: 10px; overflow: hidden; margin: 0.5rem auto; position: relative; }
 #progress-bar { height: 100%; width: 100%; background-color: #22c55e; transition: width 0.1s linear; }
 
-/* CONTROLS */
 .bottom-container { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 600px; background: #1a1a1a; border-top: 2px solid #22c55e; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 10; border-radius: 15px 15px 0 0; }
 .controls { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; width: 100%; }
 button { padding: 12px; font-size: 1rem; cursor: pointer; min-width: 70px; border-radius: 8px; border: none; font-weight: bold; background: #333; color: white; }
 .menu-toggle { background: #22c55e; color: #000; width: 100%; }
 
-/* MENU & LIST */
-#menu-section { display: none; width: 100%; background: #222; padding: 10px; border-radius: 8px; max-height: 35vh; overflow-y: auto; }
+#menu-section { display: none; width: 100%; background: #222; padding: 10px; border-radius: 8px; max-height: 35vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 input { padding: 8px; border-radius: 6px; border: 1px solid #444; background: #111; color: white; width: 50px; }
-.section-item { display: flex; justify-content: space-between; align-items: center; background: #111; margin-bottom: 5px; padding: 10px; border-radius: 5px; cursor: grab; border: 2px solid transparent; }
+
+.section-item { display: flex; justify-content: space-between; align-items: center; background: #111; margin-bottom: 5px; padding: 12px; border-radius: 5px; border: 2px solid transparent; touch-action: auto; }
 .section-item.active { border-color: #22c55e; }
-.remove-btn { background: #ef4444; min-width: 35px; padding: 5px; }
+.remove-btn { background: #ef4444; min-width: 35px; padding: 8px; font-size: 14px; }
+
+/* Sortable Ghost styling */
+.sortable-ghost { opacity: 0.4; background-color: #22c55e !important; }
 
 @media (orientation: landscape) and (max-height: 500px) {
   body { padding-bottom: 0; justify-content: flex-start; padding-top: 20px; }
@@ -127,7 +128,6 @@ function saveState(){
 }
 
 function handleAction(fn) { fn(); updateDisplay(); saveState(); }
-
 function startTimer(){ if(sections.length) isRunning=true; }
 function pauseTimer(){ isRunning=false; }
 function resetTimer(){ timeLeft=sections[currentSection]?.duration||0; overrunTime=0; isRunning=false; }
@@ -168,6 +168,9 @@ function renderSections(){
     
   new Sortable(list, {
     animation: 150,
+    delay: 500, // <--- TAP AND HOLD FOR 0.5 SECONDS TO DRAG
+    delayOnTouchOnly: true, // Only use delay on mobile devices
+    touchStartThreshold: 5, // Prevents accidental drags while scrolling
     onEnd: (evt) => {
       const item = sections.splice(evt.oldIndex, 1)[0];
       sections.splice(evt.newIndex, 0, item);
@@ -194,7 +197,7 @@ setInterval(() => {
     timeLeft -= 1;
     if(timeLeft < 0) overrunTime = Math.abs(timeLeft);
     updateDisplay();
-    if(Math.floor(Date.now()/1000) % 2 === 0) saveState(); // Sync every 2s
+    if(Math.floor(Date.now()/1000) % 2 === 0) saveState();
   }
 }, 1000);
 
