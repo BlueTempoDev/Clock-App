@@ -15,12 +15,7 @@ body { display: flex; flex-direction: column; justify-content: center; align-ite
 
 h1 { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font-size: clamp(1rem, 2vw, 1.5rem); opacity: 0.5; margin: 0; user-select: none; width: 100%; z-index: 1; }
 
-/* THE FADE-IN FIX: Initial opacity 0 */
-#timer, #remaining-time { 
-  transition: opacity 0.4s ease; 
-  opacity: 0; 
-}
-
+#timer, #remaining-time { transition: opacity 0.4s ease; opacity: 0; }
 #timer { font-size: clamp(5rem, 25vw, 15rem); font-weight: 900; margin: 0; user-select: none; line-height: 1; transition: color 0.3s ease, opacity 0.4s ease; }
 #section-title { font-size: clamp(1.5rem, 6vw, 3rem); opacity: 0.9; margin: 0.5rem 0; user-select: none; }
 #overrun, #remaining-time { font-size: clamp(1.1rem, 4vw, 2.5rem); opacity: 0.9; margin: 0.25rem 0; user-select: none; }
@@ -29,16 +24,19 @@ h1 { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font
 #progress-bar-container { width: 90%; max-width: 800px; height: clamp(15px, 4vw, 40px); background: #333; border-radius: 10px; overflow: hidden; margin: 0.5rem auto; position: relative; }
 #progress-bar { height: 100%; width: 100%; background-color: #22c55e; transition: width 0.1s linear; }
 
+/* CONTROLS */
 .bottom-container { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 600px; background: #1a1a1a; border-top: 2px solid #22c55e; padding: 15px 15px env(safe-area-inset-bottom, 20px) 15px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 10; border-radius: 15px 15px 0 0; }
 .controls { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; width: 100%; }
-
 button { padding: 12px 18px; font-size: 1rem; cursor: pointer; min-width: 75px; border-radius: 8px; border: none; font-weight: bold; background: #333; color: white; }
 .menu-toggle { background: #22c55e; color: #000; width: 100%; padding: 12px; border-radius: 8px; }
 
+/* MENU & LIST */
 #menu-section { display: none; width: 100%; background: #222; padding: 10px; border-radius: 8px; max-height: 35vh; overflow-y: auto; }
 input { padding: 10px; border-radius: 6px; border: 1px solid #444; background: #111; color: white; font-size: 1rem; }
-.section-item { display: flex; justify-content: space-between; align-items: center; background: #111; margin-bottom: 5px; padding: 10px; border-radius: 5px; }
-.section-item.active { border: 2px solid #22c55e; }
+#section-list { margin-top: 10px; }
+.section-item { display: flex; justify-content: space-between; align-items: center; background: #111; margin-bottom: 5px; padding: 10px; border-radius: 5px; cursor: pointer; border: 2px solid transparent; }
+.section-item.active { border-color: #22c55e; }
+.remove-btn { background: #ef4444; padding: 6px 12px; min-width: auto; margin-left: 10px; }
 
 @media (orientation: landscape) and (max-height: 500px) {
   body { padding-bottom: 0; justify-content: flex-start; padding-top: 25px; }
@@ -68,10 +66,10 @@ input { padding: 10px; border-radius: 6px; border: 1px solid #444; background: #
   </div>
   <button class="menu-toggle" onclick="toggleMenu()">Toggle Schedule Menu</button>
   <div id="menu-section">
-    <div class="controls">
-      <input type="text" id="section-name" placeholder="Name" />
-      <input type="number" id="minutes" placeholder="Min" />
-      <input type="number" id="seconds" placeholder="Sec" />
+    <div class="controls" style="flex-wrap: nowrap;">
+      <input type="text" id="section-name" placeholder="Name" style="flex-grow:1" />
+      <input type="number" id="minutes" placeholder="Min" style="width:50px" />
+      <input type="number" id="seconds" placeholder="Sec" style="width:50px" />
       <button onclick="addSection()">Add</button>
     </div>
     <div id="section-list"></div>
@@ -104,7 +102,6 @@ function updateDisplay(){
   const overrunEl=document.getElementById("overrun");
   const displayTime = Math.floor(timeLeft);
   
-  // Set opacity to 1 as soon as we have data
   timerEl.style.opacity = "1";
   remainingEl.style.opacity = "1";
 
@@ -150,8 +147,8 @@ function handleAction(fn) { fn(); updateDisplay(); saveState(); }
 function startTimer(){ if(sections[currentSection]) isRunning=true; }
 function pauseTimer(){ isRunning=false; }
 function resetTimer(){ timeLeft=sections[currentSection]?.duration||0; overrunTime=0; isRunning=false; }
-function nextSection(){ if(currentSection<sections.length-1){ currentSection++; timeLeft=sections[currentSection].duration; overrunTime=0; }}
-function previousSection(){ if(currentSection>0){ currentSection--; timeLeft=sections[currentSection].duration; overrunTime=0; }}
+function nextSection(){ if(currentSection<sections.length-1){ currentSection++; timeLeft=sections[currentSection].duration; overrunTime=0; isRunning=true; }}
+function previousSection(){ if(currentSection>0){ currentSection--; timeLeft=sections[currentSection].duration; overrunTime=0; isRunning=true; }}
 
 function addSection(){
   const name=document.getElementById("section-name").value.trim();
@@ -159,20 +156,35 @@ function addSection(){
   if(name && dur>0){ sections.push({name, duration: dur}); saveState(); }
 }
 
+function removeSection(index, e){
+  e.stopPropagation(); // Prevents clicking the row when hitting X
+  if(isRunning) return alert("Pause timer before removing.");
+  sections.splice(index, 1);
+  if(currentSection >= sections.length) currentSection = sections.length - 1;
+  if(sections.length > 0) timeLeft = sections[currentSection].duration;
+  saveState();
+}
+
+function jumpToSection(index){
+  currentSection = index;
+  timeLeft = sections[currentSection].duration;
+  overrunTime = 0;
+  isRunning = true;
+  saveState();
+  renderSections();
+}
+
 function listenFirebase(){
   database.ref('timerState').on('value',(snapshot)=>{
     if(Date.now() - lastPushTime < 1500) return; 
-
     const data=snapshot.val();
     if(!data || data.secretKey!=='PickAllPokemons98') return;
-    
     sections=data.sections||[]; 
     currentSection=data.currentSection??0;
     const elapsed=data.lastUpdated ? (Date.now() - data.lastUpdated)/1000 : 0;
     timeLeft=(data.timeLeft??0) - (data.isRunning?elapsed:0);
     overrunTime=data.overrunTime||0;
     isRunning=data.isRunning||false;
-    
     renderSections(); 
     updateDisplay();
   });
@@ -180,9 +192,10 @@ function listenFirebase(){
 
 function renderSections(){
   const list=document.getElementById("section-list");
-  list.innerHTML=sections.map((s,i)=>`
-    <div class="section-item ${i===currentSection?'active':''}">
+  list.innerHTML = sections.map((s, i) => `
+    <div class="section-item ${i===currentSection?'active':''}" onclick="jumpToSection(${i})">
       <span>${s.name} (${format(s.duration)})</span>
+      <button class="remove-btn" onclick="removeSection(${i}, event)">X</button>
     </div>`).join('');
 }
 
